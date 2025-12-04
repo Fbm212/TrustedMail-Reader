@@ -742,128 +742,198 @@
             }
         }
         
-        // Telegram User Initialization - Universal Solution
+        // Telegram User Initialization - Enhanced
         async function initTelegramUser() {
-            let userData = null;
+            console.log('🔍 Initializing Telegram user...');
             
-            // Method 1: Check if running in Telegram Web App
+            // Method 1: Check URL parameters first (most reliable for Telegram WebApp)
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Telegram WebApp sends data in tgWebAppData parameter
+            const tgWebAppData = urlParams.get('tgWebAppData') || 
+                                 urlParams.get('initData') || 
+                                 urlParams.get('init_data');
+            
+            if (tgWebAppData) {
+                console.log('📱 Found Telegram WebApp data in URL');
+                try {
+                    const userData = parseTelegramInitData(tgWebAppData);
+                    if (userData) {
+                        setUserData(userData);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Error parsing Telegram data:', error);
+                }
+            }
+            
+            // Method 2: Direct user parameters (for testing)
+            const userId = urlParams.get('user_id') || 
+                          urlParams.get('userId') || 
+                          urlParams.get('id');
+            
+            if (userId) {
+                console.log('👤 Found user ID in URL:', userId);
+                const userName = urlParams.get('user_name') || 
+                                urlParams.get('username') || 
+                                urlParams.get('name') || 
+                                'Telegram User';
+                
+                setUserData({
+                    id: userId,
+                    first_name: userName,
+                    username: userName.toLowerCase().replace(/\s+/g, '_'),
+                    photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`
+                });
+                return;
+            }
+            
+            // Method 3: Telegram WebApp object (if running in Telegram)
             if (window.Telegram && window.Telegram.WebApp) {
+                console.log('🤖 Telegram WebApp detected');
                 try {
                     const tg = window.Telegram.WebApp;
+                    
+                    // Initialize WebApp
                     tg.ready();
+                    tg.expand(); // Expand to full screen
                     
-                    const initData = tg.initDataUnsafe;
-                    console.log('Telegram WebApp detected:', initData);
+                    // Try to get user data with timeout
+                    setTimeout(() => {
+                        const webAppUser = tg.initDataUnsafe?.user;
+                        if (webAppUser) {
+                            console.log('✅ WebApp user found:', webAppUser);
+                            setUserData(webAppUser);
+                        } else {
+                            // Try alternative method
+                            const initDataString = tg.initData;
+                            if (initDataString) {
+                                const parsedUser = parseTelegramInitData(initDataString);
+                                if (parsedUser) {
+                                    setUserData(parsedUser);
+                                }
+                            }
+                        }
+                    }, 500);
                     
-                    if (initData && initData.user) {
-                        userData = initData.user;
-                        state.telegramUserId = userData.id.toString();
-                        state.userProfile.name = userData.first_name || 'Telegram User';
-                        state.userProfile.id = userData.id.toString();
-                        
-                        if (userData.photo_url) {
-                            state.userProfile.photo = userData.photo_url;
-                        }
-                        
-                        if (userData.username) {
-                            state.userProfile.name += ` (@${userData.username})`;
-                        }
-                    }
+                    // Return early, will set user data in setTimeout
+                    return;
+                    
                 } catch (error) {
                     console.error('Telegram WebApp error:', error);
                 }
             }
             
-            // Method 2: Check URL parameters (for testing/direct access)
-            if (!userData) {
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const userId = urlParams.get('user_id') || urlParams.get('userId');
-                    const username = urlParams.get('username') || urlParams.get('userName');
-                    
-                    if (userId) {
-                        userData = {
-                            id: userId,
-                            first_name: username || 'Test User',
-                            username: username || 'test_user'
-                        };
-                        state.telegramUserId = userId;
-                        state.userProfile.name = username || 'Test User';
-                        state.userProfile.id = userId;
-                    }
-                } catch (error) {
-                    console.error('URL param parsing error:', error);
+            // Method 4: Load from localStorage
+            try {
+                const savedUser = localStorage.getItem('telegram_user');
+                if (savedUser) {
+                    const userData = JSON.parse(savedUser);
+                    console.log('💾 Loaded user from localStorage');
+                    setUserData(userData);
+                    return;
                 }
-            }
-            
-            // Method 3: Check for Telegram initData in URL
-            if (!userData) {
-                try {
-                    const urlParams = new URLSearchParams(window.location.search);
-                    const initData = urlParams.get('tgWebAppData') || urlParams.get('initData');
-                    
-                    if (initData) {
-                        const params = new URLSearchParams(initData);
-                        const userParam = params.get('user');
-                        
-                        if (userParam) {
-                            userData = JSON.parse(decodeURIComponent(userParam));
-                            state.telegramUserId = userData.id.toString();
-                            state.userProfile.name = userData.first_name || 'Telegram User';
-                            state.userProfile.id = userData.id.toString();
-                            
-                            if (userData.photo_url) {
-                                state.userProfile.photo = userData.photo_url;
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.error('Telegram initData parsing error:', error);
-                }
-            }
-            
-            // Method 4: Load from local storage (persistent)
-            if (!userData) {
-                try {
-                    const savedUser = localStorage.getItem('otp_monitor_user');
-                    if (savedUser) {
-                        userData = JSON.parse(savedUser);
-                        state.telegramUserId = userData.id || 'local_user';
-                        state.userProfile.name = userData.name || 'Local User';
-                        state.userProfile.id = userData.id || 'local_user';
-                        
-                        if (userData.photo) {
-                            state.userProfile.photo = userData.photo;
-                        }
-                    }
-                } catch (error) {
-                    console.error('Local storage parsing error:', error);
-                }
+            } catch (error) {
+                console.error('Error loading from localStorage:', error);
             }
             
             // Method 5: Create demo user
-            if (!userData) {
-                const demoId = 'demo_' + Math.random().toString(36).substr(2, 8);
-                state.telegramUserId = demoId;
-                state.userProfile.name = 'Demo User';
-                state.userProfile.id = demoId;
+            console.log('🎭 Creating demo user');
+            const demoId = 'demo_' + Math.random().toString(36).substr(2, 8);
+            const demoUser = {
+                id: demoId,
+                first_name: 'Demo User',
+                username: 'demo_user',
+                photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${demoId}`
+            };
+            
+            setUserData(demoUser);
+            localStorage.setItem('telegram_user', JSON.stringify({
+                id: demoId,
+                name: 'Demo User',
+                photo: demoUser.photo_url,
+                isDemo: true,
+                timestamp: new Date().toISOString()
+            }));
+        }
+        
+        // Parse Telegram initData
+        function parseTelegramInitData(initData) {
+            try {
+                const params = new URLSearchParams(initData);
                 
-                // Save demo user to local storage
-                localStorage.setItem('otp_monitor_user', JSON.stringify({
-                    id: demoId,
-                    name: 'Demo User',
-                    isDemo: true
-                }));
+                // Try to get user parameter
+                const userParam = params.get('user');
+                if (userParam) {
+                    const user = JSON.parse(decodeURIComponent(userParam));
+                    console.log('✅ Parsed user from initData');
+                    return user;
+                }
                 
-                console.log('Using demo user:', demoId);
+                // Alternative: Check for individual user fields
+                const userId = params.get('user[id]') || params.get('user_id');
+                const firstName = params.get('user[first_name]') || params.get('first_name');
+                
+                if (userId && firstName) {
+                    console.log('✅ Parsed user from individual fields');
+                    return {
+                        id: userId,
+                        first_name: firstName,
+                        username: params.get('user[username]') || params.get('username'),
+                        photo_url: params.get('user[photo_url]') || params.get('photo_url')
+                    };
+                }
+                
+            } catch (error) {
+                console.error('Error parsing initData:', error);
             }
             
-            // Update UI with user data
+            return null;
+        }
+        
+        // Set user data
+        function setUserData(user) {
+            // Clean email if it exists in any field
+            let cleanEmail = '';
+            if (state.currentEmail) {
+                cleanEmail = state.currentEmail.split('|')[0]; // Take only email part before |
+                cleanEmail = cleanEmail.trim();
+            }
+            
+            state.telegramUserId = user.id.toString();
+            state.userProfile.name = user.first_name || 'Telegram User';
+            state.userProfile.id = user.id.toString();
+            
+            if (user.username) {
+                state.userProfile.name += ` (@${user.username})`;
+            }
+            
+            if (user.photo_url) {
+                state.userProfile.photo = user.photo_url;
+            } else {
+                state.userProfile.photo = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+            }
+            
+            // Update UI
             elements.userName.textContent = state.userProfile.name;
             elements.userIdValue.textContent = state.userProfile.id;
             elements.userAvatar.src = state.userProfile.photo;
             
-            console.log('User initialized:', state.userProfile);
+            // Save to localStorage
+            localStorage.setItem('telegram_user', JSON.stringify({
+                id: user.id,
+                name: state.userProfile.name,
+                photo: state.userProfile.photo,
+                first_name: user.first_name,
+                username: user.username,
+                timestamp: new Date().toISOString()
+            }));
+            
+            console.log('👤 User set successfully:', {
+                id: state.userProfile.id,
+                name: state.userProfile.name,
+                photo: state.userProfile.photo
+            });
         }
         
         // Load Stats from Local Storage
@@ -873,12 +943,10 @@
                 if (savedStats) {
                     const stats = JSON.parse(savedStats);
                     
-                    // Load monitored emails
                     if (stats.monitoredEmails && Array.isArray(stats.monitoredEmails)) {
                         state.monitoredEmails = new Set(stats.monitoredEmails);
                     }
                     
-                    // Load received OTPs
                     if (stats.receivedOtps && Array.isArray(stats.receivedOtps)) {
                         state.receivedOtps = new Set(stats.receivedOtps);
                     }
@@ -886,7 +954,7 @@
                     updateStats();
                 }
             } catch (error) {
-                console.error('Error loading stats from storage:', error);
+                console.error('Error loading stats:', error);
             }
         }
         
@@ -901,7 +969,7 @@
                 
                 localStorage.setItem('otp_monitor_stats', JSON.stringify(stats));
             } catch (error) {
-                console.error('Error saving stats to storage:', error);
+                console.error('Error saving stats:', error);
             }
         }
         
@@ -937,12 +1005,15 @@
         }
         
         async function startMonitoring(email) {
+            // Clean email (remove token if present)
+            const cleanEmail = email.split('|')[0].trim();
+            
             // Add to monitored emails (unique)
-            state.monitoredEmails.add(email);
+            state.monitoredEmails.add(cleanEmail);
             saveStatsToStorage();
             
             // Update state
-            state.currentEmail = email;
+            state.currentEmail = cleanEmail;
             state.isMonitoring = true;
             state.currentStatus = 'running';
             state.countdown = 5;
@@ -957,7 +1028,7 @@
             updateStats();
             
             // Show success alert
-            showSweetAlert('success', 'Monitoring Started', `Scanning ${email} for OTPs`);
+            showSweetAlert('success', 'Monitoring Started', `Scanning ${cleanEmail} for OTPs`);
             
             // Start timers
             startTimers();
@@ -986,20 +1057,15 @@
                 const originalApiUrl = `http://devpritom.0web.top/readmail.php?readmail=${encodeURIComponent(state.currentEmail)}`;
                 const proxyUrl = getProxyUrl(originalApiUrl);
                 
-                console.log('Using proxy:', state.proxyService);
-                console.log('Original URL:', originalApiUrl);
-                console.log('Proxy URL:', proxyUrl);
+                console.log('🔍 Scanning email:', state.currentEmail);
                 
-                // Try multiple proxy services if one fails
                 const response = await fetchWithFallback(proxyUrl, originalApiUrl);
                 
                 if (!response.ok) {
-                    throw new Error(`API responded with status: ${response.status}`);
+                    throw new Error(`API error: ${response.status}`);
                 }
                 
                 const data = await response.text();
-                console.log('API Response received');
-                
                 const otps = extractOtps(data);
                 
                 if (isFirstScan && otps.length > 0) {
@@ -1028,9 +1094,9 @@
                             state.receivedOtps.add(otp.code);
                         });
                         
-                        // Send to Telegram
+                        // Send to Telegram with buttons
                         for (const otp of newOtps) {
-                            await sendToTelegram(otp);
+                            await sendToTelegramWithButtons(otp);
                         }
                         
                         // Stop monitoring
@@ -1043,7 +1109,7 @@
                         saveStatsToStorage();
                         
                         // Show success message
-                        showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s)`);
+                        showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s) and sent to Telegram`);
                     }
                 }
                 
@@ -1061,19 +1127,11 @@
         
         // Fetch with fallback proxy services
         async function fetchWithFallback(primaryUrl, originalUrl) {
-            const proxyServices = [
-                'corsproxy.io',
-                'allorigins.win',
-                'cors-anywhere',
-                'thingproxy'
-            ];
+            const proxyServices = ['corsproxy.io', 'allorigins.win', 'cors-anywhere', 'thingproxy'];
             
-            for (let i = 0; i < proxyServices.length; i++) {
+            for (const service of proxyServices) {
                 try {
-                    const service = proxyServices[i];
                     const proxyUrl = getProxyUrlWithService(originalUrl, service);
-                    
-                    console.log(`Trying proxy service: ${service}`);
                     
                     const controller = new AbortController();
                     const timeoutId = setTimeout(() => controller.abort(), 8000);
@@ -1089,13 +1147,12 @@
                     clearTimeout(timeoutId);
                     
                     if (response.ok) {
-                        // Update current proxy service
                         state.proxyService = service;
                         localStorage.setItem('proxy_service', service);
                         return response;
                     }
                 } catch (error) {
-                    console.log(`Proxy service ${proxyServices[i]} failed:`, error.message);
+                    console.log(`Proxy ${service} failed:`, error.message);
                     continue;
                 }
             }
@@ -1107,16 +1164,11 @@
             const url = encodeURIComponent(originalUrl);
             
             switch(service) {
-                case 'corsproxy.io':
-                    return `https://corsproxy.io/?${url}`;
-                case 'allorigins.win':
-                    return `https://api.allorigins.win/raw?url=${url}`;
-                case 'cors-anywhere':
-                    return `https://cors-anywhere.herokuapp.com/${originalUrl}`;
-                case 'thingproxy':
-                    return `https://thingproxy.freeboard.io/fetch/${originalUrl}`;
-                default:
-                    return `https://corsproxy.io/?${url}`;
+                case 'corsproxy.io': return `https://corsproxy.io/?${url}`;
+                case 'allorigins.win': return `https://api.allorigins.win/raw?url=${url}`;
+                case 'cors-anywhere': return `https://cors-anywhere.herokuapp.com/${originalUrl}`;
+                case 'thingproxy': return `https://thingproxy.freeboard.io/fetch/${originalUrl}`;
+                default: return `https://corsproxy.io/?${url}`;
             }
         }
         
@@ -1128,52 +1180,40 @@
             state.proxyService = services[nextIndex];
             localStorage.setItem('proxy_service', state.proxyService);
             
-            console.log(`Switched to proxy service: ${state.proxyService}`);
+            console.log(`Switched to proxy: ${state.proxyService}`);
             return state.proxyService;
         }
         
         function stopMonitoring() {
-            // Clear intervals
             if (state.scanInterval) {
                 clearInterval(state.scanInterval);
                 state.scanInterval = null;
             }
             
-            // Update state
             state.isMonitoring = false;
             state.currentStatus = state.currentOtps.length > 0 ? 'received' : 'ready';
             
-            // Update UI
             elements.emailInput.disabled = false;
             elements.startBtn.innerHTML = '<i class="fas fa-play"></i> Start';
             elements.startBtn.classList.remove('running');
             updateStatus(state.currentStatus);
             
-            showSweetAlert('info', 'Monitoring Stopped', 'Auto-scanning has been stopped');
+            showSweetAlert('info', 'Monitoring Stopped', 'Auto-scanning stopped');
         }
         
         // Timer Management
         function startTimers() {
-            // Clear existing interval
             if (state.scanInterval) {
                 clearInterval(state.scanInterval);
             }
             
-            // Start new interval for timers only
             state.scanInterval = setInterval(() => {
                 if (state.isMonitoring) {
-                    // Update countdown
                     state.countdown--;
-                    
-                    // Update total time
                     state.totalTime++;
-                    
-                    // Update UI
                     updateTimers();
                     
-                    // Check if countdown reached 0
                     if (state.countdown <= 0) {
-                        // Reset countdown
                         state.countdown = 5;
                     }
                 }
@@ -1181,17 +1221,15 @@
         }
         
         function updateTimers() {
-            // Countdown timer (5 to 0)
             elements.countdownTimer.textContent = state.countdown.toString().padStart(2, '0');
             
-            // Total timer (MM:SS)
             const minutes = Math.floor(state.totalTime / 60);
             const seconds = state.totalTime % 60;
             elements.totalTimer.textContent = 
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
-        // Helper function to extract OTPs from API response
+        // Extract OTPs from API response
         function extractOtps(apiData) {
             let otps = [];
             
@@ -1202,7 +1240,7 @@
             try {
                 parsedData = typeof apiData === 'string' ? JSON.parse(apiData) : apiData;
             } catch (error) {
-                // If not JSON, try to extract OTP codes from text
+                // Extract OTP codes from text
                 const otpMatches = apiData.match(/\b\d{4,6}\b/g) || [];
                 otps = otpMatches.map(code => ({
                     code: code,
@@ -1215,16 +1253,13 @@
             }
             
             if (Array.isArray(parsedData)) {
-                otps = parsedData.map(otp => {
-                    const code = otp.code || otp;
-                    return {
-                        code: code.toString(),
-                        sender: otp.sender || 'Unknown',
-                        date: new Date().toLocaleDateString('en-GB'),
-                        time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                        timestamp: Date.now()
-                    };
-                });
+                otps = parsedData.map(otp => ({
+                    code: (otp.code || otp).toString(),
+                    sender: otp.sender || 'Unknown',
+                    date: new Date().toLocaleDateString('en-GB'),
+                    time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+                    timestamp: Date.now()
+                }));
             } else if (parsedData.otps && Array.isArray(parsedData.otps)) {
                 otps = parsedData.otps.map(otp => ({
                     code: (otp.code || otp).toString(),
@@ -1246,17 +1281,36 @@
             return otps;
         }
         
-        // Telegram Integration
-        async function sendToTelegram(otp) {
+        // Send to Telegram with Inline Keyboard Buttons - UPDATED
+        async function sendToTelegramWithButtons(otp) {
             if (!TELEGRAM_BOT_TOKEN || !state.telegramUserId) {
-                console.log('Telegram not configured properly');
+                console.error('Telegram configuration missing');
                 return false;
             }
             
             try {
-                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${state.currentEmail}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.sender}\n📅 *Date:* ${otp.date}\n⏰ *Time:* ${otp.time}`;
+                // Get clean email (only email part)
+                const cleanEmail = state.currentEmail.split('|')[0].trim();
                 
-                // Use proxy for Telegram API as well
+                // Create message with clean email
+                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${cleanEmail}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.sender}\n⏰ *Time:* ${otp.time}\n📅 *Date:* ${otp.date}\n\n✅ OTP successfully received and verified.`;
+                
+                // Create inline keyboard with two buttons
+                const inlineKeyboard = {
+                    inline_keyboard: [
+                        [
+                            {
+                                text: `📋 Copy OTP: ${otp.code}`,
+                                callback_data: `copy_${otp.code}`
+                            },
+                            {
+                                text: "❓ Help",
+                                callback_data: "help"
+                            }
+                        ]
+                    ]
+                };
+                
                 const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
                 const proxyUrl = getProxyUrl(telegramUrl);
                 
@@ -1268,15 +1322,47 @@
                     body: JSON.stringify({
                         chat_id: state.telegramUserId,
                         text: message,
-                        parse_mode: 'Markdown'
+                        parse_mode: 'Markdown',
+                        reply_markup: inlineKeyboard,
+                        disable_web_page_preview: true
                     })
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Telegram API error: ${response.status}`);
+                const responseData = await response.json();
+                
+                if (response.ok && responseData.ok) {
+                    console.log('✅ Telegram message sent with buttons');
+                    return true;
+                } else {
+                    console.error('Telegram API error:', responseData);
+                    
+                    // Try without inline keyboard as fallback
+                    try {
+                        const fallbackResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                chat_id: state.telegramUserId,
+                                text: message,
+                                parse_mode: 'Markdown',
+                                disable_web_page_preview: true
+                            })
+                        });
+                        
+                        const fallbackData = await fallbackResponse.json();
+                        if (fallbackResponse.ok && fallbackData.ok) {
+                            console.log('✅ Telegram message sent (fallback)');
+                            return true;
+                        }
+                    } catch (fallbackError) {
+                        console.error('Telegram fallback error:', fallbackError);
+                    }
+                    
+                    throw new Error(`Telegram API error: ${responseData.description || 'Unknown error'}`);
                 }
                 
-                return true;
             } catch (error) {
                 console.error('Telegram send error:', error);
                 return false;
@@ -1293,21 +1379,13 @@
         function updateStatus(status) {
             state.currentStatus = status;
             
-            // Update dot
             elements.statusDot.className = 'status-dot';
             elements.statusDot.classList.add(`status-${status}`);
             
-            // Update text
             switch(status) {
-                case 'ready':
-                    elements.statusText.textContent = 'Ready';
-                    break;
-                case 'running':
-                    elements.statusText.textContent = 'Running';
-                    break;
-                case 'received':
-                    elements.statusText.textContent = 'Received';
-                    break;
+                case 'ready': elements.statusText.textContent = 'Ready'; break;
+                case 'running': elements.statusText.textContent = 'Running'; break;
+                case 'received': elements.statusText.textContent = 'Received'; break;
             }
         }
         
@@ -1359,12 +1437,7 @@
         
         function getThemeColor(type) {
             const isDark = document.body.classList.contains('dark-mode');
-            
-            if (isDark) {
-                return type === 'card' ? '#1e293b' : '#f1f5f9';
-            } else {
-                return type === 'card' ? '#ffffff' : '#1e293b';
-            }
+            return isDark ? (type === 'card' ? '#1e293b' : '#f1f5f9') : (type === 'card' ? '#ffffff' : '#1e293b');
         }
         
         // Copy to Clipboard
@@ -1372,7 +1445,6 @@
             try {
                 await navigator.clipboard.writeText(text);
                 
-                // Visual feedback
                 const icon = button.querySelector('i');
                 const originalText = button.textContent;
                 icon.className = 'fas fa-check';
@@ -1387,7 +1459,6 @@
                     button.classList.remove('copied');
                 }, 2000);
             } catch (err) {
-                // Fallback
                 const textArea = document.createElement('textarea');
                 textArea.value = text;
                 document.body.appendChild(textArea);
