@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Proxy Service</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .proxy-service {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        code {
+            background: #e0e0e0;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CORS Proxy Services</h1>
+    <p>If the main app doesn't work due to CORS issues, use these proxy URLs:</p>
+    
+    <div class="proxy-service">
+        <h3>1. corsproxy.io</h3>
+        <p><code>https://corsproxy.io/?{ENCODED_URL}</code></p>
+    </div>
+    
+    <div class="proxy-service">
+        <h3>2. allorigins.win</h3>
+        <p><code>https://api.allorigins.win/raw?url={ENCODED_URL}</code></p>
+    </div>
+    
+    <div class="proxy-service">
+        <h3>3. cors-anywhere</h3>
+        <p><code>https://cors-anywhere.herokuapp.com/{URL}</code></p>
+    </div>
+</body>
+</html>
