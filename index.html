@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Monitor - Telegram SDK</title>
+    
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- SweetAlert2 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* NexaWallet Style Theme Variables - Mobile Optimized */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #8b5cf6;
+            --accent: #06d6a0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --input-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --button-bg: #2563eb;
+            --button-hover: #1d4ed8;
+            --button-disabled: #94a3b8;
+            --readonly-bg: #f1f5f9;
+            --readonly-text: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        /* Dark Mode */
+        .dark-mode {
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            --input-bg: #334155;
+            --border-color: #475569;
+            --button-bg: #2563eb;
+            --button-hover: #1d4ed8;
+            --button-disabled: #475569;
+            --readonly-bg: #334155;
+            --readonly-text: #94a3b8;
+        }
+
+        /* Global Styles - Mobile First */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+        }
+
+        /* Profile Header - Mobile Optimized */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .profile-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Updated: User info smaller and inline */
+        .profile-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .profile-details h2 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .user-id-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-light);
+        }
+
+        .user-id-container .id-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .user-id-container .id-value {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            padding: 8px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            background: var(--input-bg);
+        }
+
+        /* Stats Row - Two items side by side */
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Email Input Section */
+        .email-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .email-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--input-bg);
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .email-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        /* Control Grid - Three items side by side (Mobile Optimized) */
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .control-box {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 14px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .control-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .start-btn {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .start-btn:hover {
+            background: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        .start-btn:disabled {
+            background: var(--button-disabled);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .start-btn.running {
+            background: var(--danger);
+        }
+
+        .status-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            height: 100%;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-ready { background: var(--success); }
+        .status-running { 
+            background: var(--warning); 
+            animation: pulse 1.5s infinite; 
+        }
+        .status-received { background: var(--primary); }
+
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 100%;
+        }
+
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .timer-countdown {
+            color: var(--warning);
+            font-size: 1.3rem;
+        }
+
+        /* OTP List Section */
+        .otp-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .otp-count {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            background: var(--input-bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .otp-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .otp-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .otp-list::-webkit-scrollbar-track {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .otp-list::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .otp-item {
+            background: var(--input-bg);
+            border-radius: var(--radius);
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .otp-item.new-otp {
+            border-left-color: var(--success);
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+        }
+
+        .otp-item.old-otp {
+            border-left-color: var(--text-light);
+            opacity: 0.9;
+        }
+
+        .otp-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .otp-code {
+            font-family: 'Courier New', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+        }
+
+        .otp-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .otp-from {
+            font-weight: 500;
+        }
+
+        .otp-time {
+            color: var(--text-light);
+        }
+
+        .otp-status {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: white;
+        }
+
+        .otp-status.new {
+            background: var(--success);
+        }
+
+        .otp-status.old {
+            background: var(--text-light);
+        }
+
+        .no-otp {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        /* Loading Overlay */
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Animations */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        /* Mobile Responsive Adjustments */
+        @media (max-width: 375px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .profile-header {
+                padding: 14px;
+            }
+            
+            .profile-avatar {
+                width: 48px;
+                height: 48px;
+            }
+            
+            .stats-row,
+            .control-grid {
+                gap: 10px;
+            }
+            
+            .stat-item,
+            .control-box,
+            .email-section,
+            .otp-section {
+                padding: 14px;
+            }
+            
+            .timer {
+                font-size: 1rem;
+            }
+            
+            .timer-countdown {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            .profile-details {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Profile Header with Theme Toggle -->
+        <div class="profile-header fade-in">
+            <div class="profile-info">
+                <div class="profile-avatar">
+                    <img id="userAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User123" alt="Profile">
+                </div>
+                <div class="profile-details">
+                    <h2 id="userName">Loading Telegram User...</h2>
+                    <div class="user-id-container">
+                        <span class="id-label">ID:</span>
+                        <span class="id-value" id="userIdValue">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="Change Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+        
+        <!-- Stats Row (2 items side by side) -->
+        <div class="stats-row fade-in">
+            <div class="stat-item">
+                <div class="stat-label">Emails Monitored</div>
+                <div class="stat-value" id="uniqueEmailCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">OTPs Received</div>
+                <div class="stat-value" id="receivedOtpCount">0</div>
+            </div>
+        </div>
+        
+        <!-- Email Input -->
+        <div class="email-section fade-in">
+            <input 
+                type="email" 
+                id="emailInput" 
+                class="email-input" 
+                placeholder="Enter email address to monitor..."
+                value=""
+            >
+        </div>
+        
+        <!-- Control Grid (3 items side by side) -->
+        <div class="control-grid fade-in">
+            <!-- Start Button -->
+            <div class="control-box">
+                <div class="control-label">Action</div>
+                <button id="startBtn" class="start-btn">
+                    <i class="fas fa-play"></i> Start
+                </button>
+            </div>
+            
+            <!-- Status -->
+            <div class="control-box">
+                <div class="control-label">Status</div>
+                <div class="status-display">
+                    <div class="status-dot status-ready" id="statusDot"></div>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
+            
+            <!-- Timer -->
+            <div class="control-box">
+                <div class="control-label">Timer</div>
+                <div class="timer-container">
+                    <div class="timer timer-countdown" id="countdownTimer">05</div>
+                    <div class="timer" id="totalTimer">00:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- OTP List -->
+        <div class="otp-section fade-in">
+            <div class="section-header">
+                <h2>Received OTPs</h2>
+                <div class="otp-count" id="otpCount">0 OTPs</div>
+            </div>
+            <div class="otp-list" id="otpList">
+                <div class="no-otp" id="noOtp">
+                    No OTPs received. Start monitoring to see OTPs.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        // Telegram Bot Configuration
+        const TELEGRAM_BOT_TOKEN = '7734169736:AAGDFW2mVkNSLrrPClDohEfNE0whlwmBiuE';
+        
+        // Application State
+        const state = {
+            currentEmail: '',
+            isMonitoring: false,
+            scanInterval: null,
+            countdown: 5,
+            totalTime: 0,
+            currentStatus: 'ready',
+            currentOtps: [],
+            telegramUserId: null,
+            userProfile: {
+                name: 'Loading...',
+                id: 'Loading...',
+                photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User123'
+            },
+            monitoredEmails: new Set(),
+            receivedOtps: new Set(),
+            emailOtps: new Map(), // Map to store OTPs per email
+            proxyService: 'corsproxy.io',
+            timerInterval: null
+        };
+        
+        // DOM Elements
+        const elements = {
+            themeToggle: document.getElementById('themeToggle'),
+            userAvatar: document.getElementById('userAvatar'),
+            userName: document.getElementById('userName'),
+            userIdValue: document.getElementById('userIdValue'),
+            uniqueEmailCount: document.getElementById('uniqueEmailCount'),
+            receivedOtpCount: document.getElementById('receivedOtpCount'),
+            otpCount: document.getElementById('otpCount'),
+            emailInput: document.getElementById('emailInput'),
+            startBtn: document.getElementById('startBtn'),
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText'),
+            countdownTimer: document.getElementById('countdownTimer'),
+            totalTimer: document.getElementById('totalTimer'),
+            otpList: document.getElementById('otpList'),
+            noOtp: document.getElementById('noOtp'),
+            loading: document.getElementById('loading')
+        };
+        
+        // ==================== TELEGRAM SDK AUTO-LOGIN ====================
+        
+        // Initialize Telegram User - Telegram SDK Auto Login
+        function initTelegramUser() {
+            console.log('=== Telegram SDK Initialization Started ===');
+            
+            // Check if Telegram WebApp SDK is loaded
+            if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
+                console.error('❌ Telegram WebApp SDK not found!');
+                console.log('🔍 Available global objects:', Object.keys(window));
+                
+                // Try to load SDK dynamically
+                loadTelegramSDK();
+                return;
+            }
+            
+            const tg = window.Telegram.WebApp;
+            console.log('✅ Telegram WebApp SDK loaded');
+            
+            try {
+                // Initialize Telegram WebApp
+                tg.ready();
+                console.log('✅ Telegram WebApp ready');
+                
+                // Expand to full screen
+                tg.expand();
+                console.log('✅ Telegram WebApp expanded');
+                
+                // Set theme according to Telegram
+                const telegramTheme = tg.colorScheme;
+                console.log('📱 Telegram theme:', telegramTheme);
+                
+                if (telegramTheme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('theme', 'dark');
+                    updateThemeButton('light');
+                }
+                
+                // Get user data from Telegram
+                const initData = tg.initData || '';
+                const initDataUnsafe = tg.initDataUnsafe || {};
+                
+                console.log('📊 Telegram initData available:', initData.length > 0);
+                console.log('👤 Telegram initDataUnsafe:', initDataUnsafe);
+                
+                // Extract user information
+                let userData = null;
+                
+                if (initDataUnsafe.user) {
+                    userData = initDataUnsafe.user;
+                    console.log('✅ User from initDataUnsafe:', userData);
+                } else if (initData) {
+                    userData = parseInitData(initData);
+                    console.log('✅ User parsed from initData:', userData);
+                }
+                
+                // Set user data
+                if (userData) {
+                    setUserData(userData);
+                    console.log('🎉 Telegram user initialized successfully');
+                    
+                    // Show welcome message
+                    setTimeout(() => {
+                        showSweetAlert('success', 'Welcome!', `Hello ${userData.first_name}! Auto-login successful.`, 2000);
+                    }, 1000);
+                } else {
+                    createDemoUser();
+                    console.warn('⚠️ No user data found, using demo mode');
+                }
+                
+            } catch (error) {
+                console.error('❌ Telegram initialization error:', error);
+                createDemoUser();
+            }
+        }
+        
+        // Load Telegram SDK dynamically if not loaded
+        function loadTelegramSDK() {
+            console.log('🔄 Loading Telegram SDK dynamically...');
+            
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-web-app.js';
+            script.onload = function() {
+                console.log('✅ Telegram SDK loaded dynamically');
+                setTimeout(initTelegramUser, 500);
+            };
+            script.onerror = function() {
+                console.error('❌ Failed to load Telegram SDK');
+                createDemoUser();
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Parse initData string to get user
+        function parseInitData(initData) {
+            try {
+                console.log('🔍 Parsing initData');
+                
+                // Parse as query string
+                const params = new URLSearchParams(initData);
+                const userParam = params.get('user');
+                
+                if (userParam) {
+                    const user = JSON.parse(decodeURIComponent(userParam));
+                    console.log('✅ User parsed from initData user param');
+                    return user;
+                }
+                
+                // Look for individual user fields
+                const userFields = {};
+                params.forEach((value, key) => {
+                    if (key.startsWith('user[')) {
+                        const fieldName = key.match(/user\[(.*?)\]/)[1];
+                        userFields[fieldName] = value;
+                    }
+                });
+                
+                if (userFields.id) {
+                    console.log('✅ User parsed from individual fields');
+                    return {
+                        id: parseInt(userFields.id),
+                        first_name: userFields.first_name || 'User',
+                        last_name: userFields.last_name,
+                        username: userFields.username,
+                        language_code: userFields.language_code,
+                        is_premium: userFields.is_premium === 'true',
+                        photo_url: userFields.photo_url
+                    };
+                }
+                
+                // Try to find user in raw string
+                const userMatch = initData.match(/"user":(\{.*?\})/);
+                if (userMatch) {
+                    const user = JSON.parse(userMatch[1]);
+                    console.log('✅ User parsed from regex match');
+                    return user;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error parsing initData:', error);
+            }
+            
+            return null;
+        }
+        
+        // Create demo user for testing/fallback
+        function createDemoUser() {
+            console.log('🎭 Creating demo user for testing');
+            
+            const demoId = Math.floor(Math.random() * 1000000);
+            const demoUser = {
+                id: demoId,
+                first_name: 'Demo User',
+                username: 'demo_user',
+                language_code: 'en',
+                is_premium: false,
+                photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${demoId}`
+            };
+            
+            setUserData(demoUser);
+            
+            localStorage.setItem('telegram_user', JSON.stringify({
+                id: demoId,
+                name: 'Demo User',
+                photo: demoUser.photo_url,
+                isDemo: true,
+                timestamp: new Date().toISOString()
+            }));
+            
+            console.log('✅ Demo user created');
+        }
+        
+        // Set user data to state and UI
+        function setUserData(user) {
+            if (!user || !user.id) {
+                console.error('❌ Invalid user data:', user);
+                return;
+            }
+            
+            console.log('👤 Setting user data:', user);
+            
+            // Set state
+            state.telegramUserId = user.id.toString();
+            
+            // Create display name with username
+            let displayName = user.first_name || 'Telegram User';
+            if (user.username) {
+                displayName = `${displayName} (@${user.username})`;
+            }
+            
+            state.userProfile.name = displayName;
+            state.userProfile.id = user.id.toString();
+            
+            // Set profile photo
+            if (user.photo_url) {
+                state.userProfile.photo = user.photo_url;
+            } else {
+                state.userProfile.photo = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+            }
+            
+            // Update UI IMMEDIATELY
+            elements.userName.textContent = displayName;
+            elements.userIdValue.textContent = user.id.toString();
+            elements.userAvatar.src = state.userProfile.photo;
+            
+            console.log('✅ UI updated with user:', state.userProfile);
+            
+            // Save to localStorage
+            const userDataToSave = {
+                id: user.id,
+                name: displayName,
+                photo: state.userProfile.photo,
+                first_name: user.first_name,
+                username: user.username,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('telegram_user', JSON.stringify(userDataToSave));
+            console.log('💾 User saved to localStorage');
+        }
+        
+        // ==================== REST OF THE CODE ====================
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOM Loaded ===');
+            console.log('🔍 Checking Telegram SDK...');
+            console.log('Telegram object exists:', typeof window.Telegram !== 'undefined');
+            
+            initTheme();
+            initTelegramUser();
+            loadStatsFromStorage();
+            loadProxyService();
+            setupEventListeners();
+            updateStats();
+            updateOtpList();
+            
+            // Email input change listener
+            elements.emailInput.addEventListener('input', function() {
+                const email = this.value.trim();
+                if (email) {
+                    loadEmailOtps(email);
+                }
+            });
+        });
+        
+        // Theme Management
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeButton('light');
+            }
+        }
+        
+        function toggleTheme() {
+            if (document.body.classList.contains('dark-mode')) {
+                document.body.classList.remove('dark-mode');
+                localStorage.setItem('theme', 'light');
+                updateThemeButton('dark');
+            } else {
+                document.body.classList.add('dark-mode');
+                localStorage.setItem('theme', 'dark');
+                updateThemeButton('light');
+            }
+        }
+        
+        function updateThemeButton(targetTheme) {
+            const icon = elements.themeToggle.querySelector('i');
+            if (targetTheme === 'dark') {
+                icon.className = 'fas fa-moon';
+            } else {
+                icon.className = 'fas fa-sun';
+            }
+        }
+        
+        // Load Proxy Service from Local Storage
+        function loadProxyService() {
+            const savedProxy = localStorage.getItem('proxy_service');
+            if (savedProxy) {
+                state.proxyService = savedProxy;
+            }
+        }
+        
+        // Get Proxy URL
+        function getProxyUrl(originalUrl) {
+            const url = encodeURIComponent(originalUrl);
+            
+            switch(state.proxyService) {
+                case 'corsproxy.io':
+                    return `https://corsproxy.io/?${url}`;
+                case 'allorigins.win':
+                    return `https://api.allorigins.win/raw?url=${url}`;
+                case 'cors-anywhere':
+                    return `https://cors-anywhere.herokuapp.com/${originalUrl}`;
+                case 'thingproxy':
+                    return `https://thingproxy.freeboard.io/fetch/${originalUrl}`;
+                default:
+                    return `https://corsproxy.io/?${url}`;
+            }
+        }
+        
+        // Load Stats from Local Storage
+        function loadStatsFromStorage() {
+            try {
+                const savedStats = localStorage.getItem('otp_monitor_stats');
+                if (savedStats) {
+                    const stats = JSON.parse(savedStats);
+                    
+                    if (stats.monitoredEmails && Array.isArray(stats.monitoredEmails)) {
+                        state.monitoredEmails = new Set(stats.monitoredEmails);
+                    }
+                    
+                    if (stats.receivedOtps && Array.isArray(stats.receivedOtps)) {
+                        state.receivedOtps = new Set(stats.receivedOtps);
+                    }
+                    
+                    if (stats.emailOtps && typeof stats.emailOtps === 'object') {
+                        // Convert object to Map
+                        state.emailOtps = new Map(Object.entries(stats.emailOtps));
+                    }
+                    
+                    updateStats();
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+        
+        // Save Stats to Local Storage
+        function saveStatsToStorage() {
+            try {
+                const stats = {
+                    monitoredEmails: Array.from(state.monitoredEmails),
+                    receivedOtps: Array.from(state.receivedOtps),
+                    emailOtps: Object.fromEntries(state.emailOtps),
+                    lastUpdate: new Date().toISOString()
+                };
+                
+                localStorage.setItem('otp_monitor_stats', JSON.stringify(stats));
+            } catch (error) {
+                console.error('Error saving stats:', error);
+            }
+        }
+        
+        // Event Listeners
+        function setupEventListeners() {
+            elements.themeToggle.addEventListener('click', toggleTheme);
+            elements.startBtn.addEventListener('click', toggleMonitoring);
+            
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.copy-btn')) {
+                    const btn = e.target.closest('.copy-btn');
+                    const otp = btn.getAttribute('data-otp');
+                    copyToClipboard(otp, btn);
+                }
+            });
+        }
+        
+        // Load OTPs for specific email
+        function loadEmailOtps(email) {
+            const cleanEmail = email.split('|')[0].trim();
+            
+            if (state.emailOtps.has(cleanEmail)) {
+                state.currentOtps = state.emailOtps.get(cleanEmail);
+                updateOtpList();
+                updateEmailOtpCount();
+            } else {
+                state.currentOtps = [];
+                updateOtpList();
+                updateEmailOtpCount();
+            }
+        }
+        
+        // Update OTP count for current email
+        function updateEmailOtpCount() {
+            const count = state.currentOtps.length;
+            elements.receivedOtpCount.textContent = count;
+            elements.otpCount.textContent = `${count} OTP${count !== 1 ? 's' : ''}`;
+        }
+        
+        // Monitoring Control
+        async function toggleMonitoring() {
+            const email = elements.emailInput.value.trim();
+            
+            if (!email || !isValidEmail(email)) {
+                showSweetAlert('error', 'Invalid Email', 'Please enter a valid email address');
+                return;
+            }
+            
+            if (!state.isMonitoring) {
+                await startMonitoring(email);
+            } else {
+                stopMonitoring();
+            }
+        }
+        
+        async function startMonitoring(email) {
+            const cleanEmail = email.split('|')[0].trim();
+            
+            state.monitoredEmails.add(cleanEmail);
+            saveStatsToStorage();
+            
+            state.currentEmail = cleanEmail;
+            state.isMonitoring = true;
+            state.currentStatus = 'running';
+            state.countdown = 5;
+            state.totalTime = 0;
+            
+            elements.emailInput.disabled = true;
+            elements.startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
+            elements.startBtn.classList.add('running');
+            updateStatus('running');
+            updateTimers();
+            updateStats();
+            
+            showSweetAlert('success', 'Monitoring Started', `Scanning ${cleanEmail} for OTPs`);
+            
+            startTimers();
+            await scanEmail(true);
+            
+            if (state.scanInterval) {
+                clearInterval(state.scanInterval);
+            }
+            
+            state.scanInterval = setInterval(async () => {
+                if (state.isMonitoring) {
+                    await scanEmail(false);
+                }
+            }, 5000);
+        }
+        
+        async function scanEmail(isFirstScan = false) {
+            if (!state.isMonitoring || !state.currentEmail) return;
+            
+            elements.loading.classList.add('active');
+            
+            try {
+                const originalApiUrl = `http://devpritom.0web.top/readmail.php?readmail=${encodeURIComponent(state.currentEmail)}`;
+                const proxyUrl = getProxyUrl(originalApiUrl);
+                
+                const response = await fetchWithFallback(proxyUrl, originalApiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`API error: ${response.status}`);
+                }
+                
+                const data = await response.text();
+                console.log('📧 API Response:', data);
+                
+                const otps = extractOtps(data);
+                console.log('🔍 Extracted OTPs:', otps);
+                
+                if (otps.length === 0) {
+                    console.log('ℹ️ No OTPs found in response');
+                }
+                
+                // Get existing OTPs for this email
+                const existingOtps = state.emailOtps.get(state.currentEmail) || [];
+                const existingOtpCodes = new Set(existingOtps.map(otp => otp.code));
+                
+                // Separate new OTPs
+                const newOtps = otps.filter(otp => !existingOtpCodes.has(otp.code));
+                
+                if (newOtps.length > 0) {
+                    console.log('🎯 New OTPs found:', newOtps.length);
+                    
+                    // Mark as new
+                    newOtps.forEach(otp => {
+                        otp.status = 'new';
+                        otp.timestamp = Date.now();
+                    });
+                    
+                    // Mark existing as old
+                    existingOtps.forEach(otp => {
+                        otp.status = 'old';
+                    });
+                    
+                    // Combine and sort: new first, then old
+                    const allOtps = [...newOtps, ...existingOtps];
+                    
+                    // Update state
+                    state.currentOtps = allOtps;
+                    state.emailOtps.set(state.currentEmail, allOtps);
+                    
+                    // Add to received OTPs set
+                    newOtps.forEach(otp => {
+                        state.receivedOtps.add(otp.code);
+                    });
+                    
+                    updateOtpList();
+                    updateStats();
+                    updateEmailOtpCount();
+                    saveStatsToStorage();
+                    
+                    // Send new OTPs to Telegram
+                    for (const otp of newOtps) {
+                        await sendToTelegramWithButtons(otp);
+                    }
+                    
+                    // Stop monitoring after receiving OTPs
+                    if (!isFirstScan) {
+                        stopMonitoring();
+                        updateStatus('received');
+                        showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s) and sent to Telegram`);
+                    } else {
+                        showSweetAlert('info', 'Existing OTPs Found', `Found ${newOtps.length} OTP(s) in inbox`);
+                    }
+                    
+                } else if (isFirstScan && existingOtps.length > 0) {
+                    console.log('📂 Loading existing OTPs from storage');
+                    state.currentOtps = existingOtps;
+                    updateOtpList();
+                    updateEmailOtpCount();
+                } else if (isFirstScan && otps.length > 0) {
+                    console.log('📂 Found OTPs in first scan');
+                    otps.forEach(otp => {
+                        otp.status = 'old'; // Mark as old since they were already in inbox
+                        otp.timestamp = Date.now();
+                    });
+                    
+                    state.currentOtps = otps;
+                    state.emailOtps.set(state.currentEmail, otps);
+                    
+                    updateOtpList();
+                    updateStats();
+                    updateEmailOtpCount();
+                    saveStatsToStorage();
+                    
+                    showSweetAlert('info', 'Existing OTPs Found', `Found ${otps.length} existing OTP(s)`);
+                }
+                
+            } catch (error) {
+                console.error('❌ Scan failed:', error);
+                await switchProxyService();
+                showSweetAlert('error', 'Scan Failed', error.message || 'Unable to scan email. Trying different proxy...');
+            } finally {
+                elements.loading.classList.remove('active');
+            }
+        }
+        
+        // Fetch with fallback proxy services
+        async function fetchWithFallback(primaryUrl, originalUrl) {
+            const proxyServices = ['corsproxy.io', 'allorigins.win', 'cors-anywhere', 'thingproxy'];
+            
+            for (const service of proxyServices) {
+                try {
+                    const proxyUrl = getProxyUrlWithService(originalUrl, service);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 8000);
+                    
+                    const response = await fetch(proxyUrl, {
+                        signal: controller.signal,
+                        headers: {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                            'Accept': 'application/json, text/plain, */*'
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        state.proxyService = service;
+                        localStorage.setItem('proxy_service', service);
+                        return response;
+                    }
+                } catch (error) {
+                    console.log(`Proxy ${service} failed:`, error.message);
+                    continue;
+                }
+            }
+            
+            throw new Error('All proxy services failed');
+        }
+        
+        function getProxyUrlWithService(originalUrl, service) {
+            const url = encodeURIComponent(originalUrl);
+            
+            switch(service) {
+                case 'corsproxy.io': return `https://corsproxy.io/?${url}`;
+                case 'allorigins.win': return `https://api.allorigins.win/raw?url=${url}`;
+                case 'cors-anywhere': return `https://cors-anywhere.herokuapp.com/${originalUrl}`;
+                case 'thingproxy': return `https://thingproxy.freeboard.io/fetch/${originalUrl}`;
+                default: return `https://corsproxy.io/?${url}`;
+            }
+        }
+        
+        async function switchProxyService() {
+            const services = ['corsproxy.io', 'allorigins.win', 'cors-anywhere', 'thingproxy'];
+            const currentIndex = services.indexOf(state.proxyService);
+            const nextIndex = (currentIndex + 1) % services.length;
+            
+            state.proxyService = services[nextIndex];
+            localStorage.setItem('proxy_service', state.proxyService);
+            
+            console.log(`Switched to proxy: ${state.proxyService}`);
+            return state.proxyService;
+        }
+        
+        function stopMonitoring() {
+            if (state.scanInterval) {
+                clearInterval(state.scanInterval);
+                state.scanInterval = null;
+            }
+            
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+                state.timerInterval = null;
+            }
+            
+            state.isMonitoring = false;
+            state.currentStatus = state.currentOtps.length > 0 ? 'received' : 'ready';
+            
+            elements.emailInput.disabled = false;
+            elements.startBtn.innerHTML = '<i class="fas fa-play"></i> Start';
+            elements.startBtn.classList.remove('running');
+            updateStatus(state.currentStatus);
+            
+            showSweetAlert('info', 'Monitoring Stopped', 'Auto-scanning stopped');
+        }
+        
+        // Timer Management - FIXED
+        function startTimers() {
+            // Clear any existing intervals
+            if (state.timerInterval) {
+                clearInterval(state.timerInterval);
+            }
+            
+            // Start countdown timer
+            state.timerInterval = setInterval(() => {
+                if (state.isMonitoring) {
+                    state.countdown--;
+                    state.totalTime++;
+                    
+                    if (state.countdown <= 0) {
+                        state.countdown = 5; // Reset to 5 seconds
+                    }
+                    
+                    updateTimers();
+                }
+            }, 1000);
+        }
+        
+        function updateTimers() {
+            // Update countdown timer (00 format)
+            elements.countdownTimer.textContent = state.countdown.toString().padStart(2, '0');
+            
+            // Update total timer (mm:ss format)
+            const minutes = Math.floor(state.totalTime / 60);
+            const seconds = state.totalTime % 60;
+            elements.totalTimer.textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Extract OTPs from API response - IMPROVED
+        function extractOtps(apiData) {
+            console.log('🔎 Extracting OTPs from data');
+            
+            let otps = [];
+            
+            if (!apiData) {
+                console.log('❌ No API data');
+                return otps;
+            }
+            
+            // Try to parse as JSON first
+            try {
+                const parsedData = JSON.parse(apiData);
+                console.log('✅ Parsed as JSON:', parsedData);
+                
+                if (Array.isArray(parsedData)) {
+                    // If array of OTP objects
+                    otps = parsedData.map(otp => {
+                        const otpCode = otp.code || otp.otp || otp;
+                        if (otpCode && /^\d{4,8}$/.test(otpCode.toString())) {
+                            return {
+                                code: otpCode.toString(),
+                                sender: otp.sender || otp.from || 'Unknown',
+                                date: otp.date || new Date().toLocaleDateString('en-GB'),
+                                time: otp.time || new Date().toLocaleTimeString('en-GB', { hour12: false }),
+                                timestamp: otp.timestamp || Date.now()
+                            };
+                        }
+                        return null;
+                    }).filter(otp => otp !== null);
+                } else if (parsedData.code || parsedData.otp) {
+                    // If single OTP object
+                    const otpCode = parsedData.code || parsedData.otp;
+                    if (otpCode && /^\d{4,8}$/.test(otpCode.toString())) {
+                        otps = [{
+                            code: otpCode.toString(),
+                            sender: parsedData.sender || parsedData.from || 'Unknown',
+                            date: parsedData.date || new Date().toLocaleDateString('en-GB'),
+                            time: parsedData.time || new Date().toLocaleTimeString('en-GB', { hour12: false }),
+                            timestamp: parsedData.timestamp || Date.now()
+                        }];
+                    }
+                }
+                
+                if (otps.length > 0) {
+                    console.log(`✅ Found ${otps.length} OTP(s) in JSON`);
+                    return otps;
+                }
+                
+            } catch (e) {
+                console.log('ℹ️ Not valid JSON, trying text extraction');
+            }
+            
+            // Try to extract OTPs from plain text
+            console.log('🔍 Searching for OTPs in text...');
+            
+            // Common OTP patterns
+            const otpPatterns = [
+                /\bOTP[:\s]*(\d{4,8})\b/i,
+                /\bCode[:\s]*(\d{4,8})\b/i,
+                /\bVerification[:\s]*(\d{4,8})\b/i,
+                /\b(\d{4,8})\s+is\s+your\s+(OTP|code|verification)/i,
+                /\bYour\s+(OTP|code|verification)[\s\S]*?(\d{4,8})\b/i,
+                /\b(\d{4,8})\b.*?(OTP|code|verification)/i
+            ];
+            
+            const foundOtps = new Set();
+            
+            // Try each pattern
+            for (const pattern of otpPatterns) {
+                const matches = apiData.match(new RegExp(pattern, 'gi'));
+                if (matches) {
+                    for (const match of matches) {
+                        const codeMatch = match.match(/\d{4,8}/);
+                        if (codeMatch && !foundOtps.has(codeMatch[0])) {
+                            foundOtps.add(codeMatch[0]);
+                            otps.push({
+                                code: codeMatch[0],
+                                sender: 'Extracted from email',
+                                date: new Date().toLocaleDateString('en-GB'),
+                                time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+                                timestamp: Date.now()
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Also look for standalone 4-8 digit numbers
+            const numberMatches = apiData.match(/\b\d{4,8}\b/g) || [];
+            for (const number of numberMatches) {
+                if (!foundOtps.has(number)) {
+                    foundOtps.add(number);
+                    otps.push({
+                        code: number,
+                        sender: 'Extracted from email',
+                        date: new Date().toLocaleDateString('en-GB'),
+                        time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+                        timestamp: Date.now()
+                    });
+                }
+            }
+            
+            console.log(`✅ Extracted ${otps.length} OTP(s) from text`);
+            return otps;
+        }
+        
+        // Send to Telegram with Inline Keyboard Buttons
+        async function sendToTelegramWithButtons(otp) {
+            if (!TELEGRAM_BOT_TOKEN || !state.telegramUserId) {
+                console.error('Telegram configuration missing');
+                return false;
+            }
+            
+            try {
+                const cleanEmail = state.currentEmail.split('|')[0].trim();
+                
+                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${cleanEmail}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.sender}\n⏰ *Time:* ${otp.time}\n📅 *Date:* ${otp.date}\n\n✅ OTP successfully received and verified.`;
+                
+                const inlineKeyboard = {
+                    inline_keyboard: [
+                        [
+                            {
+                                text: `📋 Copy OTP: ${otp.code}`,
+                                callback_data: `copy_${otp.code}`
+                            },
+                            {
+                                text: "❓ Help",
+                                callback_data: "help"
+                            }
+                        ]
+                    ]
+                };
+                
+                const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+                const proxyUrl = getProxyUrl(telegramUrl);
+                
+                const response = await fetch(proxyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        chat_id: state.telegramUserId,
+                        text: message,
+                        parse_mode: 'Markdown',
+                        reply_markup: inlineKeyboard,
+                        disable_web_page_preview: true
+                    })
+                });
+                
+                const responseData = await response.json();
+                
+                if (response.ok && responseData.ok) {
+                    console.log('✅ Telegram message sent with buttons');
+                    return true;
+                } else {
+                    console.error('Telegram API error:', responseData);
+                    
+                    try {
+                        const fallbackResponse = await fetch(proxyUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                chat_id: state.telegramUserId,
+                                text: message,
+                                parse_mode: 'Markdown',
+                                disable_web_page_preview: true
+                            })
+                        });
+                        
+                        const fallbackData = await fallbackResponse.json();
+                        if (fallbackResponse.ok && fallbackData.ok) {
+                            console.log('✅ Telegram message sent (fallback)');
+                            return true;
+                        }
+                    } catch (fallbackError) {
+                        console.error('Telegram fallback error:', fallbackError);
+                    }
+                    
+                    throw new Error(`Telegram API error: ${responseData.description || 'Unknown error'}`);
+                }
+                
+            } catch (error) {
+                console.error('Telegram send error:', error);
+                return false;
+            }
+        }
+        
+        // UI Updates
+        function updateStats() {
+            elements.uniqueEmailCount.textContent = state.monitoredEmails.size;
+        }
+        
+        function updateStatus(status) {
+            state.currentStatus = status;
+            
+            elements.statusDot.className = 'status-dot';
+            elements.statusDot.classList.add(`status-${status}`);
+            
+            switch(status) {
+                case 'ready': 
+                    elements.statusText.textContent = 'Ready'; 
+                    break;
+                case 'running': 
+                    elements.statusText.textContent = 'Running'; 
+                    break;
+                case 'received': 
+                    elements.statusText.textContent = 'Received'; 
+                    break;
+            }
+        }
+        
+        function updateOtpList() {
+            if (state.currentOtps.length === 0) {
+                elements.noOtp.style.display = 'block';
+                elements.otpList.innerHTML = '';
+                return;
+            }
+            
+            elements.noOtp.style.display = 'none';
+            
+            // Sort OTPs: new first, then old
+            const sortedOtps = [...state.currentOtps].sort((a, b) => {
+                if (a.status === 'new' && b.status !== 'new') return -1;
+                if (a.status !== 'new' && b.status === 'new') return 1;
+                return (b.timestamp || 0) - (a.timestamp || 0); // Newest first
+            });
+            
+            const otpItems = sortedOtps.map(otp => `
+                <div class="otp-item ${otp.status === 'new' ? 'new-otp' : 'old-otp'}">
+                    <div class="otp-code">
+                        <span>${otp.code}</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span class="otp-status ${otp.status || 'old'}">
+                                ${otp.status === 'new' ? 'NEW' : 'OLD'}
+                            </span>
+                            <button class="copy-btn" data-otp="${otp.code}" title="Copy OTP">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                    </div>
+                    <div class="otp-meta">
+                        <span class="otp-from">From: ${otp.sender}</span>
+                        <span class="otp-time">${otp.date} ${otp.time}</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            elements.otpList.innerHTML = otpItems;
+        }
+        
+        // SweetAlert2 Functions
+        function showSweetAlert(icon, title, text, timer = 3000) {
+            Swal.fire({
+                icon: icon,
+                title: title,
+                text: text,
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: timer,
+                timerProgressBar: true,
+                background: getThemeColor('card'),
+                color: getThemeColor('text'),
+                customClass: {
+                    popup: 'sweet-popup'
+                }
+            });
+        }
+        
+        function getThemeColor(type) {
+            const isDark = document.body.classList.contains('dark-mode');
+            return isDark ? (type === 'card' ? '#1e293b' : '#f1f5f9') : (type === 'card' ? '#ffffff' : '#1e293b');
+        }
+        
+        // Copy to Clipboard
+        async function copyToClipboard(text, button) {
+            try {
+                await navigator.clipboard.writeText(text);
+                
+                const icon = button.querySelector('i');
+                const originalText = button.textContent;
+                icon.className = 'fas fa-check';
+                button.textContent = ' Copied';
+                button.classList.add('copied');
+                
+                showSweetAlert('success', 'Copied!', 'OTP copied to clipboard', 2000);
+                
+                setTimeout(() => {
+                    icon.className = 'fas fa-copy';
+                    button.textContent = originalText;
+                    button.classList.remove('copied');
+                }, 2000);
+            } catch (err) {
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                showSweetAlert('success', 'Copied!', 'OTP copied to clipboard', 2000);
+            }
+        }
+        
+        // Validation
+        function isValidEmail(email) {
+            const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return re.test(email);
+        }
+        
+        // Add SweetAlert custom styling
+        const style = document.createElement('style');
+        style.textContent = `
+            .sweet-popup {
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+            }
+            
+            .swal2-toast {
+                width: auto !important;
+                min-width: 300px;
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
