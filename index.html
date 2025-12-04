@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OTP Monitor - Universal</title>
+    <title>OTP Monitor - Telegram SDK</title>
+    
+    <!-- Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <!-- SweetAlert2 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
@@ -90,6 +93,7 @@
             padding: 16px;
             margin-bottom: 16px;
             box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .profile-info {
@@ -548,7 +552,7 @@
                     <img id="userAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User123" alt="Profile">
                 </div>
                 <div class="profile-details">
-                    <h2 id="userName">User Name</h2>
+                    <h2 id="userName">Loading Telegram User...</h2>
                     <p id="userId">User ID: <span id="userIdValue">Loading...</span></p>
                 </div>
             </div>
@@ -646,13 +650,13 @@
             currentOtps: [],
             telegramUserId: null,
             userProfile: {
-                name: 'User Name',
+                name: 'Loading...',
                 id: 'Loading...',
                 photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User123'
             },
-            monitoredEmails: new Set(), // Unique emails
-            receivedOtps: new Set(), // Unique OTPs
-            proxyService: 'corsproxy.io' // Default proxy service
+            monitoredEmails: new Set(),
+            receivedOtps: new Set(),
+            proxyService: 'corsproxy.io'
         };
         
         // DOM Elements
@@ -675,8 +679,233 @@
             loading: document.getElementById('loading')
         };
         
+        // ==================== TELEGRAM SDK AUTO-LOGIN ====================
+        
+        // Initialize Telegram User - Telegram SDK Auto Login
+        function initTelegramUser() {
+            console.log('=== Telegram SDK Initialization Started ===');
+            
+            // Check if Telegram WebApp SDK is loaded
+            if (typeof window.Telegram === 'undefined' || !window.Telegram.WebApp) {
+                console.error('❌ Telegram WebApp SDK not found!');
+                console.log('🔍 Available global objects:', Object.keys(window));
+                
+                // Try to load SDK dynamically
+                loadTelegramSDK();
+                return;
+            }
+            
+            const tg = window.Telegram.WebApp;
+            console.log('✅ Telegram WebApp SDK loaded');
+            
+            try {
+                // Initialize Telegram WebApp
+                tg.ready();
+                console.log('✅ Telegram WebApp ready');
+                
+                // Expand to full screen
+                tg.expand();
+                console.log('✅ Telegram WebApp expanded');
+                
+                // Set theme according to Telegram
+                const telegramTheme = tg.colorScheme;
+                console.log('📱 Telegram theme:', telegramTheme);
+                
+                if (telegramTheme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('theme', 'dark');
+                    updateThemeButton('light');
+                }
+                
+                // Get user data from Telegram
+                const initData = tg.initData || '';
+                const initDataUnsafe = tg.initDataUnsafe || {};
+                
+                console.log('📊 Telegram initData available:', initData.length > 0);
+                console.log('👤 Telegram initDataUnsafe:', initDataUnsafe);
+                
+                // Extract user information
+                let userData = null;
+                
+                if (initDataUnsafe.user) {
+                    userData = initDataUnsafe.user;
+                    console.log('✅ User from initDataUnsafe:', userData);
+                } else if (initData) {
+                    userData = parseInitData(initData);
+                    console.log('✅ User parsed from initData:', userData);
+                }
+                
+                // Set user data
+                if (userData) {
+                    setUserData(userData);
+                    console.log('🎉 Telegram user initialized successfully');
+                    
+                    // Show welcome message
+                    setTimeout(() => {
+                        showSweetAlert('success', 'Welcome!', `Hello ${userData.first_name}! Auto-login successful.`, 2000);
+                    }, 1000);
+                } else {
+                    createDemoUser();
+                    console.warn('⚠️ No user data found, using demo mode');
+                }
+                
+            } catch (error) {
+                console.error('❌ Telegram initialization error:', error);
+                createDemoUser();
+            }
+        }
+        
+        // Load Telegram SDK dynamically if not loaded
+        function loadTelegramSDK() {
+            console.log('🔄 Loading Telegram SDK dynamically...');
+            
+            const script = document.createElement('script');
+            script.src = 'https://telegram.org/js/telegram-web-app.js';
+            script.onload = function() {
+                console.log('✅ Telegram SDK loaded dynamically');
+                setTimeout(initTelegramUser, 500);
+            };
+            script.onerror = function() {
+                console.error('❌ Failed to load Telegram SDK');
+                createDemoUser();
+            };
+            document.head.appendChild(script);
+        }
+        
+        // Parse initData string to get user
+        function parseInitData(initData) {
+            try {
+                console.log('🔍 Parsing initData');
+                
+                // Parse as query string
+                const params = new URLSearchParams(initData);
+                const userParam = params.get('user');
+                
+                if (userParam) {
+                    const user = JSON.parse(decodeURIComponent(userParam));
+                    console.log('✅ User parsed from initData user param');
+                    return user;
+                }
+                
+                // Look for individual user fields
+                const userFields = {};
+                params.forEach((value, key) => {
+                    if (key.startsWith('user[')) {
+                        const fieldName = key.match(/user\[(.*?)\]/)[1];
+                        userFields[fieldName] = value;
+                    }
+                });
+                
+                if (userFields.id) {
+                    console.log('✅ User parsed from individual fields');
+                    return {
+                        id: parseInt(userFields.id),
+                        first_name: userFields.first_name || 'User',
+                        last_name: userFields.last_name,
+                        username: userFields.username,
+                        language_code: userFields.language_code,
+                        is_premium: userFields.is_premium === 'true',
+                        photo_url: userFields.photo_url
+                    };
+                }
+                
+                // Try to find user in raw string
+                const userMatch = initData.match(/"user":(\{.*?\})/);
+                if (userMatch) {
+                    const user = JSON.parse(userMatch[1]);
+                    console.log('✅ User parsed from regex match');
+                    return user;
+                }
+                
+            } catch (error) {
+                console.error('❌ Error parsing initData:', error);
+            }
+            
+            return null;
+        }
+        
+        // Create demo user for testing/fallback
+        function createDemoUser() {
+            console.log('🎭 Creating demo user for testing');
+            
+            const demoId = Math.floor(Math.random() * 1000000);
+            const demoUser = {
+                id: demoId,
+                first_name: 'Demo User',
+                username: 'demo_user',
+                language_code: 'en',
+                is_premium: false,
+                photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${demoId}`
+            };
+            
+            setUserData(demoUser);
+            
+            localStorage.setItem('telegram_user', JSON.stringify({
+                id: demoId,
+                name: 'Demo User',
+                photo: demoUser.photo_url,
+                isDemo: true,
+                timestamp: new Date().toISOString()
+            }));
+            
+            console.log('✅ Demo user created');
+        }
+        
+        // Set user data to state and UI
+        function setUserData(user) {
+            if (!user || !user.id) {
+                console.error('❌ Invalid user data:', user);
+                return;
+            }
+            
+            console.log('👤 Setting user data:', user);
+            
+            // Set state
+            state.telegramUserId = user.id.toString();
+            state.userProfile.name = user.first_name || 'Telegram User';
+            state.userProfile.id = user.id.toString();
+            
+            // Add username if available
+            if (user.username) {
+                state.userProfile.name += ` (@${user.username})`;
+            }
+            
+            // Set profile photo
+            if (user.photo_url) {
+                state.userProfile.photo = user.photo_url;
+            } else {
+                state.userProfile.photo = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
+            }
+            
+            // Update UI IMMEDIATELY
+            elements.userName.textContent = state.userProfile.name;
+            elements.userIdValue.textContent = state.userProfile.id;
+            elements.userAvatar.src = state.userProfile.photo;
+            
+            console.log('✅ UI updated with user:', state.userProfile);
+            
+            // Save to localStorage
+            const userDataToSave = {
+                id: user.id,
+                name: state.userProfile.name,
+                photo: state.userProfile.photo,
+                first_name: user.first_name,
+                username: user.username,
+                timestamp: new Date().toISOString()
+            };
+            
+            localStorage.setItem('telegram_user', JSON.stringify(userDataToSave));
+            console.log('💾 User saved to localStorage');
+        }
+        
+        // ==================== REST OF THE CODE (UNCHANGED) ====================
+        
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOM Loaded ===');
+            console.log('🔍 Checking Telegram SDK...');
+            console.log('Telegram object exists:', typeof window.Telegram !== 'undefined');
+            
             initTheme();
             initTelegramUser();
             loadStatsFromStorage();
@@ -724,7 +953,7 @@
             }
         }
         
-        // Get Proxy URL based on selected service
+        // Get Proxy URL
         function getProxyUrl(originalUrl) {
             const url = encodeURIComponent(originalUrl);
             
@@ -740,200 +969,6 @@
                 default:
                     return `https://corsproxy.io/?${url}`;
             }
-        }
-        
-        // Telegram User Initialization - Enhanced
-        async function initTelegramUser() {
-            console.log('🔍 Initializing Telegram user...');
-            
-            // Method 1: Check URL parameters first (most reliable for Telegram WebApp)
-            const urlParams = new URLSearchParams(window.location.search);
-            
-            // Telegram WebApp sends data in tgWebAppData parameter
-            const tgWebAppData = urlParams.get('tgWebAppData') || 
-                                 urlParams.get('initData') || 
-                                 urlParams.get('init_data');
-            
-            if (tgWebAppData) {
-                console.log('📱 Found Telegram WebApp data in URL');
-                try {
-                    const userData = parseTelegramInitData(tgWebAppData);
-                    if (userData) {
-                        setUserData(userData);
-                        return;
-                    }
-                } catch (error) {
-                    console.error('Error parsing Telegram data:', error);
-                }
-            }
-            
-            // Method 2: Direct user parameters (for testing)
-            const userId = urlParams.get('user_id') || 
-                          urlParams.get('userId') || 
-                          urlParams.get('id');
-            
-            if (userId) {
-                console.log('👤 Found user ID in URL:', userId);
-                const userName = urlParams.get('user_name') || 
-                                urlParams.get('username') || 
-                                urlParams.get('name') || 
-                                'Telegram User';
-                
-                setUserData({
-                    id: userId,
-                    first_name: userName,
-                    username: userName.toLowerCase().replace(/\s+/g, '_'),
-                    photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`
-                });
-                return;
-            }
-            
-            // Method 3: Telegram WebApp object (if running in Telegram)
-            if (window.Telegram && window.Telegram.WebApp) {
-                console.log('🤖 Telegram WebApp detected');
-                try {
-                    const tg = window.Telegram.WebApp;
-                    
-                    // Initialize WebApp
-                    tg.ready();
-                    tg.expand(); // Expand to full screen
-                    
-                    // Try to get user data with timeout
-                    setTimeout(() => {
-                        const webAppUser = tg.initDataUnsafe?.user;
-                        if (webAppUser) {
-                            console.log('✅ WebApp user found:', webAppUser);
-                            setUserData(webAppUser);
-                        } else {
-                            // Try alternative method
-                            const initDataString = tg.initData;
-                            if (initDataString) {
-                                const parsedUser = parseTelegramInitData(initDataString);
-                                if (parsedUser) {
-                                    setUserData(parsedUser);
-                                }
-                            }
-                        }
-                    }, 500);
-                    
-                    // Return early, will set user data in setTimeout
-                    return;
-                    
-                } catch (error) {
-                    console.error('Telegram WebApp error:', error);
-                }
-            }
-            
-            // Method 4: Load from localStorage
-            try {
-                const savedUser = localStorage.getItem('telegram_user');
-                if (savedUser) {
-                    const userData = JSON.parse(savedUser);
-                    console.log('💾 Loaded user from localStorage');
-                    setUserData(userData);
-                    return;
-                }
-            } catch (error) {
-                console.error('Error loading from localStorage:', error);
-            }
-            
-            // Method 5: Create demo user
-            console.log('🎭 Creating demo user');
-            const demoId = 'demo_' + Math.random().toString(36).substr(2, 8);
-            const demoUser = {
-                id: demoId,
-                first_name: 'Demo User',
-                username: 'demo_user',
-                photo_url: `https://api.dicebear.com/7.x/avataaars/svg?seed=${demoId}`
-            };
-            
-            setUserData(demoUser);
-            localStorage.setItem('telegram_user', JSON.stringify({
-                id: demoId,
-                name: 'Demo User',
-                photo: demoUser.photo_url,
-                isDemo: true,
-                timestamp: new Date().toISOString()
-            }));
-        }
-        
-        // Parse Telegram initData
-        function parseTelegramInitData(initData) {
-            try {
-                const params = new URLSearchParams(initData);
-                
-                // Try to get user parameter
-                const userParam = params.get('user');
-                if (userParam) {
-                    const user = JSON.parse(decodeURIComponent(userParam));
-                    console.log('✅ Parsed user from initData');
-                    return user;
-                }
-                
-                // Alternative: Check for individual user fields
-                const userId = params.get('user[id]') || params.get('user_id');
-                const firstName = params.get('user[first_name]') || params.get('first_name');
-                
-                if (userId && firstName) {
-                    console.log('✅ Parsed user from individual fields');
-                    return {
-                        id: userId,
-                        first_name: firstName,
-                        username: params.get('user[username]') || params.get('username'),
-                        photo_url: params.get('user[photo_url]') || params.get('photo_url')
-                    };
-                }
-                
-            } catch (error) {
-                console.error('Error parsing initData:', error);
-            }
-            
-            return null;
-        }
-        
-        // Set user data
-        function setUserData(user) {
-            // Clean email if it exists in any field
-            let cleanEmail = '';
-            if (state.currentEmail) {
-                cleanEmail = state.currentEmail.split('|')[0]; // Take only email part before |
-                cleanEmail = cleanEmail.trim();
-            }
-            
-            state.telegramUserId = user.id.toString();
-            state.userProfile.name = user.first_name || 'Telegram User';
-            state.userProfile.id = user.id.toString();
-            
-            if (user.username) {
-                state.userProfile.name += ` (@${user.username})`;
-            }
-            
-            if (user.photo_url) {
-                state.userProfile.photo = user.photo_url;
-            } else {
-                state.userProfile.photo = `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.id}`;
-            }
-            
-            // Update UI
-            elements.userName.textContent = state.userProfile.name;
-            elements.userIdValue.textContent = state.userProfile.id;
-            elements.userAvatar.src = state.userProfile.photo;
-            
-            // Save to localStorage
-            localStorage.setItem('telegram_user', JSON.stringify({
-                id: user.id,
-                name: state.userProfile.name,
-                photo: state.userProfile.photo,
-                first_name: user.first_name,
-                username: user.username,
-                timestamp: new Date().toISOString()
-            }));
-            
-            console.log('👤 User set successfully:', {
-                id: state.userProfile.id,
-                name: state.userProfile.name,
-                photo: state.userProfile.photo
-            });
         }
         
         // Load Stats from Local Storage
@@ -978,7 +1013,6 @@
             elements.themeToggle.addEventListener('click', toggleTheme);
             elements.startBtn.addEventListener('click', toggleMonitoring);
             
-            // Copy OTP functionality
             document.addEventListener('click', function(e) {
                 if (e.target.closest('.copy-btn')) {
                     const btn = e.target.closest('.copy-btn');
@@ -1005,21 +1039,17 @@
         }
         
         async function startMonitoring(email) {
-            // Clean email (remove token if present)
             const cleanEmail = email.split('|')[0].trim();
             
-            // Add to monitored emails (unique)
             state.monitoredEmails.add(cleanEmail);
             saveStatsToStorage();
             
-            // Update state
             state.currentEmail = cleanEmail;
             state.isMonitoring = true;
             state.currentStatus = 'running';
             state.countdown = 5;
             state.totalTime = 0;
             
-            // Update UI
             elements.emailInput.disabled = true;
             elements.startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
             elements.startBtn.classList.add('running');
@@ -1027,16 +1057,11 @@
             updateTimers();
             updateStats();
             
-            // Show success alert
             showSweetAlert('success', 'Monitoring Started', `Scanning ${cleanEmail} for OTPs`);
             
-            // Start timers
             startTimers();
-            
-            // First scan for existing OTPs
             await scanEmail(true);
             
-            // Continue scanning for new OTPs every 5 seconds
             if (state.scanInterval) {
                 clearInterval(state.scanInterval);
             }
@@ -1057,8 +1082,6 @@
                 const originalApiUrl = `http://devpritom.0web.top/readmail.php?readmail=${encodeURIComponent(state.currentEmail)}`;
                 const proxyUrl = getProxyUrl(originalApiUrl);
                 
-                console.log('🔍 Scanning email:', state.currentEmail);
-                
                 const response = await fetchWithFallback(proxyUrl, originalApiUrl);
                 
                 if (!response.ok) {
@@ -1069,7 +1092,6 @@
                 const otps = extractOtps(data);
                 
                 if (isFirstScan && otps.length > 0) {
-                    // First scan - show existing OTPs
                     otps.forEach(otp => {
                         state.currentOtps.push(otp);
                         state.receivedOtps.add(otp.code);
@@ -1081,44 +1103,35 @@
                     
                     showSweetAlert('info', 'Existing OTPs Found', `Found ${otps.length} existing OTP(s)`);
                 } else if (!isFirstScan) {
-                    // Subsequent scans - look for new OTPs
                     const newOtps = otps.filter(otp => 
                         !state.receivedOtps.has(otp.code) && 
                         !state.currentOtps.some(existing => existing.code === otp.code)
                     );
                     
                     if (newOtps.length > 0) {
-                        // Add new OTPs
                         newOtps.forEach(otp => {
                             state.currentOtps.unshift(otp);
                             state.receivedOtps.add(otp.code);
                         });
                         
-                        // Send to Telegram with buttons
                         for (const otp of newOtps) {
                             await sendToTelegramWithButtons(otp);
                         }
                         
-                        // Stop monitoring
                         stopMonitoring();
                         updateStatus('received');
                         
-                        // Update UI
                         updateOtpList();
                         updateStats();
                         saveStatsToStorage();
                         
-                        // Show success message
                         showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s) and sent to Telegram`);
                     }
                 }
                 
             } catch (error) {
                 console.error('Scan failed:', error);
-                
-                // Try switching proxy service
                 await switchProxyService();
-                
                 showSweetAlert('error', 'Scan Failed', error.message || 'Unable to scan email. Trying different proxy...');
             } finally {
                 elements.loading.classList.remove('active');
@@ -1235,12 +1248,10 @@
             
             if (!apiData) return otps;
             
-            // Try to parse as JSON
             let parsedData;
             try {
                 parsedData = typeof apiData === 'string' ? JSON.parse(apiData) : apiData;
             } catch (error) {
-                // Extract OTP codes from text
                 const otpMatches = apiData.match(/\b\d{4,6}\b/g) || [];
                 otps = otpMatches.map(code => ({
                     code: code,
@@ -1281,7 +1292,7 @@
             return otps;
         }
         
-        // Send to Telegram with Inline Keyboard Buttons - UPDATED
+        // Send to Telegram with Inline Keyboard Buttons
         async function sendToTelegramWithButtons(otp) {
             if (!TELEGRAM_BOT_TOKEN || !state.telegramUserId) {
                 console.error('Telegram configuration missing');
@@ -1289,13 +1300,10 @@
             }
             
             try {
-                // Get clean email (only email part)
                 const cleanEmail = state.currentEmail.split('|')[0].trim();
                 
-                // Create message with clean email
                 const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${cleanEmail}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.sender}\n⏰ *Time:* ${otp.time}\n📅 *Date:* ${otp.date}\n\n✅ OTP successfully received and verified.`;
                 
-                // Create inline keyboard with two buttons
                 const inlineKeyboard = {
                     inline_keyboard: [
                         [
@@ -1336,7 +1344,6 @@
                 } else {
                     console.error('Telegram API error:', responseData);
                     
-                    // Try without inline keyboard as fallback
                     try {
                         const fallbackResponse = await fetch(proxyUrl, {
                             method: 'POST',
