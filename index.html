@@ -683,6 +683,665 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </body>
+
+
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OTP Monitor - Telegram SDK</title>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #8b5cf6;
+            --accent: #06d6a0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            --radius: 12px;
+            --input-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --button-bg: #2563eb;
+            --button-hover: #1d4ed8;
+            --button-disabled: #94a3b8;
+            --readonly-bg: #f1f5f9;
+            --readonly-text: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        .dark-mode {
+            --text: #f1f5f9;
+            --text-light: #94a3b8;
+            --bg: #0f172a;
+            --card: #1e293b;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+            --input-bg: #334155;
+            --border-color: #475569;
+            --button-bg: #2563eb;
+            --button-hover: #1d4ed8;
+            --button-disabled: #475569;
+            --readonly-bg: #334155;
+            --readonly-text: #94a3b8;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            transition: all 0.3s ease;
+            min-height: 100vh;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 12px;
+        }
+
+        .profile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        .profile-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex: 1;
+        }
+
+        .profile-avatar {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid var(--primary);
+            flex-shrink: 0;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-details {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .profile-details h2 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--primary);
+            line-height: 1.2;
+        }
+
+        .user-id-container {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-light);
+        }
+
+        .user-id-container .id-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+        }
+
+        .user-id-container .id-value {
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .theme-toggle {
+            background: none;
+            border: none;
+            color: var(--text);
+            cursor: pointer;
+            padding: 8px;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            flex-shrink: 0;
+        }
+
+        .theme-toggle:hover {
+            background: var(--input-bg);
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .stat-item {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-bottom: 6px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .email-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .email-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius);
+            background: var(--input-bg);
+            color: var(--text);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .email-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .control-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .control-box {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 14px;
+            box-shadow: var(--shadow);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .control-label {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .start-btn {
+            background: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: var(--radius);
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .start-btn:hover {
+            background: var(--button-hover);
+            transform: translateY(-2px);
+        }
+
+        .start-btn:disabled {
+            background: var(--button-disabled);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .start-btn.running {
+            background: var(--danger);
+        }
+
+        .status-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            height: 100%;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-ready { background: var(--success); }
+        .status-running { 
+            background: var(--warning); 
+            animation: pulse 1.5s infinite; 
+        }
+        .status-received { background: var(--primary); }
+
+        .timer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 100%;
+        }
+
+        .timer {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .timer-countdown {
+            color: var(--warning);
+            font-size: 1.3rem;
+        }
+
+        .otp-section {
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .otp-count {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            background: var(--input-bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .otp-list {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .otp-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .otp-list::-webkit-scrollbar-track {
+            background: var(--border-color);
+            border-radius: 2px;
+        }
+
+        .otp-list::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 2px;
+        }
+
+        .otp-item {
+            background: var(--input-bg);
+            border-radius: var(--radius);
+            padding: 14px;
+            margin-bottom: 10px;
+            border-left: 3px solid var(--primary);
+            transition: all 0.3s ease;
+        }
+
+        .otp-item.new-otp {
+            border-left-color: var(--success);
+            background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+        }
+
+        .otp-item.old-otp {
+            border-left-color: var(--text-light);
+            opacity: 0.9;
+        }
+
+        .otp-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .otp-code {
+            font-family: 'Courier New', monospace;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .copy-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        .copy-btn.copied {
+            background: var(--success);
+        }
+
+        .otp-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+
+        .otp-from {
+            font-weight: 500;
+        }
+
+        .otp-time {
+            color: var(--text-light);
+        }
+
+        .otp-status {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background: var(--primary);
+            color: white;
+        }
+
+        .otp-status.new {
+            background: var(--success);
+        }
+
+        .otp-status.old {
+            background: var(--text-light);
+        }
+
+        .no-otp {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1001;
+            backdrop-filter: blur(5px);
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeInUp 0.4s ease-out;
+        }
+
+        @media (max-width: 375px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .profile-header {
+                padding: 14px;
+            }
+            
+            .profile-avatar {
+                width: 48px;
+                height: 48px;
+            }
+            
+            .stats-row,
+            .control-grid {
+                gap: 10px;
+            }
+            
+            .stat-item,
+            .control-box,
+            .email-section,
+            .otp-section {
+                padding: 14px;
+            }
+            
+            .timer {
+                font-size: 1rem;
+            }
+            
+            .timer-countdown {
+                font-size: 1.2rem;
+            }
+        }
+
+        @media (max-width: 320px) {
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .profile-info {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+            
+            .profile-details {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="profile-header fade-in">
+            <div class="profile-info">
+                <div class="profile-avatar">
+                    <img id="userAvatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=User123" alt="Profile">
+                </div>
+                <div class="profile-details">
+                    <h2 id="userName">Loading Telegram User...</h2>
+                    <div class="user-id-container">
+                        <span class="id-label">ID:</span>
+                        <span class="id-value" id="userIdValue">Loading...</span>
+                    </div>
+                </div>
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="Change Theme">
+                <i class="fas fa-moon"></i>
+            </button>
+        </div>
+        
+        <div class="stats-row fade-in">
+            <div class="stat-item">
+                <div class="stat-label">Emails Monitored</div>
+                <div class="stat-value" id="uniqueEmailCount">0</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-label">Total OTPs Received</div>
+                <div class="stat-value" id="totalOtpCount">0</div>
+            </div>
+        </div>
+        
+        <div class="email-section fade-in">
+            <input 
+                type="email" 
+                id="emailInput" 
+                class="email-input" 
+                placeholder="Enter full email string to monitor..."
+                value=""
+            >
+        </div>
+        
+        <div class="control-grid fade-in">
+            <div class="control-box">
+                <div class="control-label">Action</div>
+                <button id="startBtn" class="start-btn">
+                    <i class="fas fa-play"></i> Start
+                </button>
+            </div>
+            
+            <div class="control-box">
+                <div class="control-label">Status</div>
+                <div class="status-display">
+                    <div class="status-dot status-ready" id="statusDot"></div>
+                    <span id="statusText">Ready</span>
+                </div>
+            </div>
+            
+            <div class="control-box">
+                <div class="control-label">Timer</div>
+                <div class="timer-container">
+                    <div class="timer timer-countdown" id="countdownTimer">05</div>
+                    <div class="timer" id="totalTimer">00:00</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="otp-section fade-in">
+            <div class="section-header">
+                <h2>Received OTPs</h2>
+                <div class="otp-count" id="otpCount">0 OTPs</div>
+            </div>
+            <div class="otp-list" id="otpList">
+                <div class="no-otp" id="noOtp">
+                    No OTPs received. Start monitoring to see OTPs.
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    </body>
+
     <script>
         // Telegram Bot Configuration
         const TELEGRAM_BOT_TOKEN = '7673657711:AAG9aHlpI8_Egvwi0fY9rxA4qyEfqOw16nU';
@@ -703,7 +1362,7 @@
                 photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=User123'
             },
             monitoredEmails: new Set(),
-            receivedOtps: new Set(),
+            totalReceivedOtps: new Set(), // GLOBAL OTP COUNTER
             emailOtps: new Map(),
             proxyService: 'corsproxy.io',
             timerInterval: null,
@@ -718,7 +1377,8 @@
                 'corsproxy.nexus',
                 'proxy.cors.sh'
             ],
-            monitoringStartTime: null // Track when monitoring started
+            monitoringStartTime: null,
+            apiRequestCount: 0
         };
         
         // DOM Elements
@@ -728,7 +1388,7 @@
             userName: document.getElementById('userName'),
             userIdValue: document.getElementById('userIdValue'),
             uniqueEmailCount: document.getElementById('uniqueEmailCount'),
-            receivedOtpCount: document.getElementById('receivedOtpCount'),
+            totalOtpCount: document.getElementById('totalOtpCount'), // Changed ID
             otpCount: document.getElementById('otpCount'),
             emailInput: document.getElementById('emailInput'),
             startBtn: document.getElementById('startBtn'),
@@ -741,9 +1401,7 @@
             loading: document.getElementById('loading')
         };
         
-        // ==================== TELEGRAM SDK AUTO-LOGIN ====================
-        
-        // Initialize Telegram User - Telegram SDK Auto Login
+        // Initialize Telegram User
         function initTelegramUser() {
             console.log('=== Telegram SDK Initialization Started ===');
             
@@ -759,9 +1417,7 @@
             try {
                 tg.ready();
                 console.log('✅ Telegram WebApp ready');
-                
                 tg.expand();
-                console.log('✅ Telegram WebApp expanded');
                 
                 const telegramTheme = tg.colorScheme;
                 console.log('📱 Telegram theme:', telegramTheme);
@@ -774,8 +1430,6 @@
                 
                 const initData = tg.initData || '';
                 const initDataUnsafe = tg.initDataUnsafe || {};
-                
-                console.log('📊 Telegram initData available:', initData.length > 0);
                 
                 let userData = null;
                 
@@ -805,7 +1459,6 @@
             }
         }
         
-        // Load Telegram SDK dynamically if not loaded
         function loadTelegramSDK() {
             console.log('🔄 Loading Telegram SDK dynamically...');
             
@@ -822,7 +1475,6 @@
             document.head.appendChild(script);
         }
         
-        // Parse initData string to get user
         function parseInitData(initData) {
             try {
                 console.log('🔍 Parsing initData');
@@ -871,7 +1523,6 @@
             return null;
         }
         
-        // Create demo user for testing/fallback
         function createDemoUser() {
             console.log('🎭 Creating demo user for testing');
             
@@ -898,7 +1549,6 @@
             console.log('✅ Demo user created');
         }
         
-        // Set user data to state and UI
         function setUserData(user) {
             if (!user || !user.id) {
                 console.error('❌ Invalid user data:', user);
@@ -942,9 +1592,8 @@
             console.log('💾 User saved to localStorage');
         }
         
-        // ==================== REST OF THE CODE ====================
+        // ==================== MAIN CODE ====================
         
-        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             console.log('=== DOM Loaded ===');
             
@@ -967,13 +1616,11 @@
             });
         });
         
-        // Extract email from full string
         function extractEmailFromString(emailString) {
             const emailMatch = emailString.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
             return emailMatch ? emailMatch[0] : emailString.split('|')[0] || emailString;
         }
         
-        // Theme Management
         function initTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
             if (savedTheme === 'dark') {
@@ -1003,7 +1650,6 @@
             }
         }
         
-        // Load Proxy Service from Local Storage
         function loadProxyService() {
             const savedProxy = localStorage.getItem('proxy_service');
             if (savedProxy) {
@@ -1013,7 +1659,6 @@
             }
         }
         
-        // Get Proxy URL with rotation
         function getProxyUrl(originalUrl) {
             const currentProxy = state.proxyList[state.activeProxyIndex];
             const url = encodeURIComponent(originalUrl);
@@ -1038,7 +1683,6 @@
             }
         }
         
-        // Rotate to next proxy
         function rotateProxy() {
             state.activeProxyIndex = (state.activeProxyIndex + 1) % state.proxyList.length;
             state.proxyService = state.proxyList[state.activeProxyIndex];
@@ -1047,7 +1691,6 @@
             return state.proxyService;
         }
         
-        // Load Stats from Local Storage
         function loadStatsFromStorage() {
             try {
                 const savedStats = localStorage.getItem('otp_monitor_stats');
@@ -1058,8 +1701,8 @@
                         state.monitoredEmails = new Set(stats.monitoredEmails);
                     }
                     
-                    if (stats.receivedOtps && Array.isArray(stats.receivedOtps)) {
-                        state.receivedOtps = new Set(stats.receivedOtps);
+                    if (stats.totalReceivedOtps && Array.isArray(stats.totalReceivedOtps)) {
+                        state.totalReceivedOtps = new Set(stats.totalReceivedOtps);
                     }
                     
                     if (stats.emailOtps && typeof stats.emailOtps === 'object') {
@@ -1073,12 +1716,11 @@
             }
         }
         
-        // Save Stats to Local Storage
         function saveStatsToStorage() {
             try {
                 const stats = {
                     monitoredEmails: Array.from(state.monitoredEmails),
-                    receivedOtps: Array.from(state.receivedOtps),
+                    totalReceivedOtps: Array.from(state.totalReceivedOtps), // Save GLOBAL OTPs
                     emailOtps: Object.fromEntries(state.emailOtps),
                     lastUpdate: new Date().toISOString()
                 };
@@ -1089,7 +1731,6 @@
             }
         }
         
-        // Event Listeners
         function setupEventListeners() {
             elements.themeToggle.addEventListener('click', toggleTheme);
             elements.startBtn.addEventListener('click', toggleMonitoring);
@@ -1103,7 +1744,6 @@
             });
         }
         
-        // Load OTPs for specific email
         function loadEmailOtps(email) {
             const cleanEmail = email.split('|')[0].trim();
             
@@ -1118,14 +1758,11 @@
             }
         }
         
-        // Update OTP count for current email
         function updateEmailOtpCount() {
             const count = state.currentOtps.length;
-            elements.receivedOtpCount.textContent = count;
             elements.otpCount.textContent = `${count} OTP${count !== 1 ? 's' : ''}`;
         }
         
-        // Monitoring Control
         async function toggleMonitoring() {
             const emailString = elements.emailInput.value.trim();
             
@@ -1158,7 +1795,8 @@
             state.countdown = 5;
             state.totalTime = 0;
             state.retryCount = 0;
-            state.monitoringStartTime = Date.now(); // Set monitoring start time
+            state.monitoringStartTime = Date.now();
+            state.apiRequestCount = 0;
             
             elements.emailInput.disabled = true;
             elements.startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
@@ -1183,20 +1821,17 @@
             }, 10000);
         }
         
-        // Parse date from API response
         function parseApiDate(dateString) {
-            // Format: "00:16 - 04/12/2025"
             try {
                 const [timePart, datePart] = dateString.split(' - ');
                 const [hours, minutes] = timePart.split(':');
                 const [day, month, year] = datePart.split('/');
                 
-                // Create a Date object (months are 0-indexed in JavaScript)
                 const date = new Date(year, month - 1, day, hours, minutes);
-                return date.getTime(); // Return timestamp
+                return date.getTime();
             } catch (error) {
                 console.error('Error parsing date:', dateString, error);
-                return Date.now(); // Fallback to current time
+                return Date.now();
             }
         }
         
@@ -1204,9 +1839,12 @@
             if (!state.isMonitoring || !state.currentEmail) return;
             
             elements.loading.classList.add('active');
+            state.apiRequestCount++;
             
             try {
-                const originalApiUrl = `http://devpritom.0web.top/readmail.php?readmail=${encodeURIComponent(state.currentEmail)}`;
+                // Add cache busting parameter
+                const timestamp = Date.now();
+                const originalApiUrl = `http://devpritom.0web.top/readmail.php?readmail=${encodeURIComponent(state.currentEmail)}&_=${timestamp}&request=${state.apiRequestCount}`;
                 console.log('🔗 API URL:', originalApiUrl);
                 
                 const proxyUrl = getProxyUrl(originalApiUrl);
@@ -1220,50 +1858,48 @@
                 }
                 
                 const data = await response.text();
-                console.log('📧 Raw API Response:', data.substring(0, 200) + '...');
+                console.log('📧 API Response received');
                 
                 const apiResponse = extractApiData(data);
-                console.log('🔍 Parsed API Response:', apiResponse);
+                console.log('✅ Parsed API Response:', {
+                    status: apiResponse.status,
+                    total_messages: apiResponse.total_messages,
+                    codes_found_count: apiResponse.codes_found ? apiResponse.codes_found.length : 0,
+                    messages_count: apiResponse.messages ? apiResponse.messages.length : 0
+                });
                 
-                const otps = apiResponse.messages.filter(msg => msg.code && msg.code.trim() !== '');
-                
-                console.log('🎯 Filtered OTPs with codes:', otps);
+                // Get ALL OTPs from both sources
+                const allOtpsFromApi = getAllOtpsFromApiResponse(apiResponse);
+                console.log(`🔍 Found ${allOtpsFromApi.length} OTPs from API`);
                 
                 const emailPart = extractEmailFromString(state.currentEmail);
-                
                 const existingOtps = state.emailOtps.get(emailPart) || [];
                 const existingOtpCodes = new Set(existingOtps.map(otp => otp.code));
                 
-                // Separate new OTPs - based on monitoring start time
-                const newOtps = otps.filter(msg => {
-                    // Check if this OTP is already in existing OTPs
-                    if (existingOtpCodes.has(msg.code)) {
+                // Filter new OTPs with timestamp check
+                const newOtps = allOtpsFromApi.filter(otp => {
+                    // Skip if already exists
+                    if (existingOtpCodes.has(otp.code)) {
                         return false;
                     }
                     
-                    // Check timestamp - only send to Telegram if received AFTER monitoring started
-                    const messageTimestamp = msg.timestamp;
-                    const monitoringStartTime = state.monitoringStartTime;
-                    
-                    // If this is first scan, check all OTPs
+                    // Check timestamp for Telegram sending
                     if (isFirstScan) {
-                        return true; // Show all OTPs found in first scan
+                        return true; // Show all in first scan
                     } else {
                         // For subsequent scans, only include OTPs received AFTER monitoring started
-                        return messageTimestamp > monitoringStartTime;
+                        return otp.timestamp > state.monitoringStartTime;
                     }
                 });
                 
-                console.log('🕐 Monitoring Start Time:', new Date(state.monitoringStartTime).toLocaleString());
-                console.log('📨 New OTPs after filtering:', newOtps);
+                console.log(`🎯 New OTPs after filtering: ${newOtps.length}`);
                 
                 if (newOtps.length > 0) {
-                    console.log('🎯 New OTPs found after time filter:', newOtps.length);
+                    console.log('✨ Processing new OTPs:', newOtps);
                     
                     // Mark as new
                     newOtps.forEach(otp => {
                         otp.status = 'new';
-                        otp.timestamp = otp.timestamp || Date.now();
                         otp.email = emailPart;
                     });
                     
@@ -1274,11 +1910,13 @@
                     
                     const allOtps = [...newOtps, ...existingOtps];
                     
+                    // Update state
                     state.currentOtps = allOtps;
                     state.emailOtps.set(emailPart, allOtps);
                     
+                    // Add to GLOBAL OTP counter
                     newOtps.forEach(otp => {
-                        state.receivedOtps.add(otp.code);
+                        state.totalReceivedOtps.add(otp.code);
                     });
                     
                     updateOtpList();
@@ -1286,17 +1924,21 @@
                     updateEmailOtpCount();
                     saveStatsToStorage();
                     
-                    // Send to Telegram only if NOT first scan (for OTPs received AFTER monitoring started)
-                    if (!isFirstScan) {
+                    // Send to Telegram only if NOT first scan
+                    if (!isFirstScan && newOtps.length > 0) {
+                        console.log('📤 Sending new OTPs to Telegram');
                         for (const otp of newOtps) {
-                            await sendToTelegramWithButtons(otp);
+                            const sent = await sendToTelegramWithButtons(otp);
+                            if (sent) {
+                                console.log(`✅ Sent OTP ${otp.code} to Telegram`);
+                            }
                         }
                         
                         stopMonitoring();
                         updateStatus('received');
                         showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s) and sent to Telegram`);
-                    } else {
-                        showSweetAlert('info', 'Existing OTPs Found', `Found ${newOtps.length} OTP(s) in inbox`);
+                    } else if (isFirstScan && newOtps.length > 0) {
+                        showSweetAlert('info', 'Existing OTPs Found', `Found ${newOtps.length} existing OTP(s) in inbox`);
                     }
                     
                 } else if (isFirstScan && existingOtps.length > 0) {
@@ -1304,27 +1946,31 @@
                     state.currentOtps = existingOtps;
                     updateOtpList();
                     updateEmailOtpCount();
-                } else if (isFirstScan && otps.length > 0) {
+                } else if (isFirstScan && allOtpsFromApi.length > 0) {
                     console.log('📂 Found OTPs in first scan');
-                    otps.forEach(otp => {
-                        otp.status = 'old'; // Mark as old since they were already in inbox
-                        otp.timestamp = otp.timestamp || Date.now();
+                    allOtpsFromApi.forEach(otp => {
+                        otp.status = 'old';
                         otp.email = emailPart;
                     });
                     
-                    state.currentOtps = otps;
-                    state.emailOtps.set(emailPart, otps);
+                    state.currentOtps = allOtpsFromApi;
+                    state.emailOtps.set(emailPart, allOtpsFromApi);
+                    
+                    // Add to GLOBAL OTP counter
+                    allOtpsFromApi.forEach(otp => {
+                        state.totalReceivedOtps.add(otp.code);
+                    });
                     
                     updateOtpList();
                     updateStats();
                     updateEmailOtpCount();
                     saveStatsToStorage();
                     
-                    showSweetAlert('info', 'Existing OTPs Found', `Found ${otps.length} existing OTP(s)`);
+                    showSweetAlert('info', 'Existing OTPs Found', `Found ${allOtpsFromApi.length} existing OTP(s)`);
                 } else if (isFirstScan) {
                     showSweetAlert('info', 'Scan Complete', 'No OTPs found in email inbox');
                 } else {
-                    console.log('✅ Auto scan completed successfully (no new OTPs after monitoring start)');
+                    console.log('✅ Auto scan completed (no new OTPs)');
                 }
                 
             } catch (error) {
@@ -1347,7 +1993,55 @@
             }
         }
         
-        // Extract API data with new structure
+        // Get ALL OTPs from API response (from both codes_found and messages)
+        function getAllOtpsFromApiResponse(apiResponse) {
+            const otps = [];
+            
+            // 1. From codes_found array
+            if (apiResponse.codes_found && Array.isArray(apiResponse.codes_found)) {
+                apiResponse.codes_found.forEach(code => {
+                    if (code && code.trim() !== '') {
+                        otps.push({
+                            code: code.toString().trim(),
+                            from: 'Email Service',
+                            subject: 'OTP Code',
+                            date: new Date().toLocaleString('en-GB'),
+                            timestamp: Date.now()
+                        });
+                    }
+                });
+            }
+            
+            // 2. From messages array
+            if (apiResponse.messages && Array.isArray(apiResponse.messages)) {
+                apiResponse.messages.forEach(msg => {
+                    if (msg.code && msg.code.trim() !== '') {
+                        otps.push({
+                            code: msg.code.toString().trim(),
+                            from: msg.from || 'Unknown',
+                            subject: msg.subject || 'No Subject',
+                            date: msg.date || new Date().toLocaleString('en-GB'),
+                            timestamp: parseApiDate(msg.date) || Date.now(),
+                            displaySubject: msg.subject ? msg.subject.substring(0, 50) + (msg.subject.length > 50 ? '...' : '') : 'No Subject'
+                        });
+                    }
+                });
+            }
+            
+            // Remove duplicates
+            const uniqueOtps = [];
+            const seenCodes = new Set();
+            
+            otps.forEach(otp => {
+                if (!seenCodes.has(otp.code)) {
+                    seenCodes.add(otp.code);
+                    uniqueOtps.push(otp);
+                }
+            });
+            
+            return uniqueOtps;
+        }
+        
         function extractApiData(apiData) {
             console.log('🔎 Extracting API data');
             
@@ -1373,20 +2067,7 @@
             
             try {
                 const parsedData = JSON.parse(cleanData);
-                console.log('✅ Parsed as JSON');
-                
-                // Process messages to add timestamp
-                if (parsedData.messages && Array.isArray(parsedData.messages)) {
-                    parsedData.messages = parsedData.messages.map(msg => ({
-                        ...msg,
-                        timestamp: parseApiDate(msg.date || ''),
-                        // Format date for display
-                        displayDate: msg.date || 'Unknown',
-                        // Clean subject for display
-                        displaySubject: msg.subject ? msg.subject.substring(0, 50) + (msg.subject.length > 50 ? '...' : '') : 'No Subject'
-                    }));
-                }
-                
+                console.log('✅ Successfully parsed JSON');
                 return parsedData;
                 
             } catch (e) {
@@ -1395,7 +2076,6 @@
             }
         }
         
-        // Fetch with retry logic
         async function fetchWithRetry(proxyUrl, originalUrl) {
             for (let attempt = 0; attempt < 2; attempt++) {
                 try {
@@ -1407,7 +2087,9 @@
                         headers: {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                             'Accept': 'application/json, text/plain, */*',
-                            'Origin': window.location.origin
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache',
+                            'Expires': '0'
                         }
                     });
                     
@@ -1456,7 +2138,6 @@
             showSweetAlert('info', 'Monitoring Stopped', 'Auto-scanning stopped');
         }
         
-        // Timer Management
         function startTimers() {
             if (state.timerInterval) {
                 clearInterval(state.timerInterval);
@@ -1485,7 +2166,6 @@
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
-        // Send to Telegram with Inline Keyboard Buttons
         async function sendToTelegramWithButtons(otp) {
             if (!TELEGRAM_BOT_TOKEN || !state.telegramUserId) {
                 console.error('Telegram configuration missing');
@@ -1495,17 +2175,13 @@
             try {
                 const emailPart = extractEmailFromString(state.currentEmail);
                 
-                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${emailPart}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.from}\n📝 *Subject:* ${otp.subject}\n📅 *Date/Time:* ${otp.displayDate}\n\n✅ OTP successfully received and verified.`;
+                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${emailPart}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.from}\n📝 *Subject:* ${otp.subject}\n📅 *Date/Time:* ${otp.date}\n\n✅ OTP successfully received and verified.`;
                 
                 const inlineKeyboard = {
                     inline_keyboard: [
                         [
                             {
-                                text: "❓ Help",
-                                callback_data: "help"
-                            },
-                            {
-                                text: `${otp.code}`,
+                                text: `📋 Copy OTP: ${otp.code}`,
                                 callback_data: `copy_${otp.code}`
                             }
                         ]
@@ -1531,11 +2207,12 @@
                 const responseData = await response.json();
                 
                 if (response.ok && responseData.ok) {
-                    console.log('✅ Telegram message sent with buttons');
+                    console.log('✅ Telegram message sent successfully');
                     return true;
                 } else {
                     console.error('Telegram API error:', responseData);
                     
+                    // Try without inline keyboard
                     try {
                         const fallbackResponse = await fetch(telegramUrl, {
                             method: 'POST',
@@ -1568,9 +2245,9 @@
             }
         }
         
-        // UI Updates
         function updateStats() {
             elements.uniqueEmailCount.textContent = state.monitoredEmails.size;
+            elements.totalOtpCount.textContent = state.totalReceivedOtps.size; // GLOBAL OTP COUNT
         }
         
         function updateStatus(status) {
@@ -1628,7 +2305,7 @@
                             </div>
                         </div>
                         <div class="otp-time" style="text-align: right;">
-                            <div style="font-weight: 500;">${otp.displayDate || otp.date || 'Unknown Date'}</div>
+                            <div style="font-weight: 500;">${otp.date || 'Unknown Date'}</div>
                             <div style="font-size: 0.7rem; color: var(--text-light);">Email Received Time</div>
                         </div>
                     </div>
@@ -1638,7 +2315,6 @@
             elements.otpList.innerHTML = otpItems;
         }
         
-        // SweetAlert2 Functions
         function showSweetAlert(icon, title, text, timer = 3000) {
             Swal.fire({
                 icon: icon,
@@ -1662,7 +2338,6 @@
             return isDark ? (type === 'card' ? '#1e293b' : '#f1f5f9') : (type === 'card' ? '#ffffff' : '#1e293b');
         }
         
-        // Copy to Clipboard
         async function copyToClipboard(text, button) {
             try {
                 await navigator.clipboard.writeText(text);
@@ -1692,7 +2367,6 @@
             }
         }
         
-        // Add SweetAlert custom styling
         const style = document.createElement('style');
         style.textContent = `
             .sweet-popup {
@@ -1707,4 +2381,5 @@
         `;
         document.head.appendChild(style);
     </script>
+
 </html>
