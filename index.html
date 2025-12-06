@@ -682,10 +682,12 @@
 
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+       // ... [Previous HTML and CSS code remains exactly the same until the script tag] ...
 
-        <script>
+    <script>
         // Telegram Bot Configuration
-        const TELEGRAM_BOT_TOKEN = '7673657711:AAG9aHlpI8_Egvwi0fY9rxA4qyEfqOw16nU';
+        const TELEGRAM_BOT_TOKEN = '7734169736:AAGDFW2mVkNSLrrPClDohEfNE0whlwmBiuE';
         
         // Application State
         const state = {
@@ -717,7 +719,8 @@
                 'thingproxy',
                 'corsproxy.nexus',
                 'proxy.cors.sh'
-            ]
+            ],
+            monitoringStartTime: null // Track when monitoring started
         };
         
         // DOM Elements
@@ -1157,6 +1160,7 @@
             state.countdown = 5;
             state.totalTime = 0;
             state.retryCount = 0;
+            state.monitoringStartTime = Date.now(); // Set monitoring start time
             
             elements.emailInput.disabled = true;
             elements.startBtn.innerHTML = '<i class="fas fa-stop"></i> Stop';
@@ -1174,12 +1178,28 @@
                 clearInterval(state.scanInterval);
             }
             
-            // Auto scan interval - with longer delay for reliability
             state.scanInterval = setInterval(async () => {
                 if (state.isMonitoring) {
                     await scanEmail(false);
                 }
-            }, 10000); // Increased to 10 seconds for better reliability
+            }, 10000);
+        }
+        
+        // Parse date from API response
+        function parseApiDate(dateString) {
+            // Format: "00:16 - 04/12/2025"
+            try {
+                const [timePart, datePart] = dateString.split(' - ');
+                const [hours, minutes] = timePart.split(':');
+                const [day, month, year] = datePart.split('/');
+                
+                // Create a Date object (months are 0-indexed in JavaScript)
+                const date = new Date(year, month - 1, day, hours, minutes);
+                return date.getTime(); // Return timestamp
+            } catch (error) {
+                console.error('Error parsing date:', dateString, error);
+                return Date.now(); // Fallback to current time
+            }
         }
         
         async function scanEmail(isFirstScan = false) {
@@ -1193,7 +1213,6 @@
                 
                 const proxyUrl = getProxyUrl(originalApiUrl);
                 
-                // Reset retry count for new scan
                 state.retryCount = 0;
                 
                 const response = await fetchWithRetry(proxyUrl, originalApiUrl);
@@ -1205,29 +1224,52 @@
                 const data = await response.text();
                 console.log('📧 Raw API Response:', data.substring(0, 200) + '...');
                 
-                const otps = extractOtps(data);
-                console.log('🔍 Extracted OTPs:', otps);
+                const apiResponse = extractApiData(data);
+                console.log('🔍 Parsed API Response:', apiResponse);
                 
-                if (otps.length === 0) {
-                    console.log('ℹ️ No OTPs found in response');
-                }
+                const otps = apiResponse.messages.filter(msg => msg.code && msg.code.trim() !== '');
+                
+                console.log('🎯 Filtered OTPs with codes:', otps);
                 
                 const emailPart = extractEmailFromString(state.currentEmail);
                 
                 const existingOtps = state.emailOtps.get(emailPart) || [];
                 const existingOtpCodes = new Set(existingOtps.map(otp => otp.code));
                 
-                const newOtps = otps.filter(otp => !existingOtpCodes.has(otp.code));
+                // Separate new OTPs - based on monitoring start time
+                const newOtps = otps.filter(msg => {
+                    // Check if this OTP is already in existing OTPs
+                    if (existingOtpCodes.has(msg.code)) {
+                        return false;
+                    }
+                    
+                    // Check timestamp - only send to Telegram if received AFTER monitoring started
+                    const messageTimestamp = msg.timestamp;
+                    const monitoringStartTime = state.monitoringStartTime;
+                    
+                    // If this is first scan, check all OTPs
+                    if (isFirstScan) {
+                        return true; // Show all OTPs found in first scan
+                    } else {
+                        // For subsequent scans, only include OTPs received AFTER monitoring started
+                        return messageTimestamp > monitoringStartTime;
+                    }
+                });
+                
+                console.log('🕐 Monitoring Start Time:', new Date(state.monitoringStartTime).toLocaleString());
+                console.log('📨 New OTPs after filtering:', newOtps);
                 
                 if (newOtps.length > 0) {
-                    console.log('🎯 New OTPs found:', newOtps.length);
+                    console.log('🎯 New OTPs found after time filter:', newOtps.length);
                     
+                    // Mark as new
                     newOtps.forEach(otp => {
                         otp.status = 'new';
-                        otp.timestamp = Date.now();
+                        otp.timestamp = otp.timestamp || Date.now();
                         otp.email = emailPart;
                     });
                     
+                    // Mark existing as old
                     existingOtps.forEach(otp => {
                         otp.status = 'old';
                     });
@@ -1246,11 +1288,12 @@
                     updateEmailOtpCount();
                     saveStatsToStorage();
                     
-                    for (const otp of newOtps) {
-                        await sendToTelegramWithButtons(otp);
-                    }
-                    
+                    // Send to Telegram only if NOT first scan (for OTPs received AFTER monitoring started)
                     if (!isFirstScan) {
+                        for (const otp of newOtps) {
+                            await sendToTelegramWithButtons(otp);
+                        }
+                        
                         stopMonitoring();
                         updateStatus('received');
                         showSweetAlert('success', 'New OTP Received!', `Received ${newOtps.length} new OTP(s) and sent to Telegram`);
@@ -1266,8 +1309,8 @@
                 } else if (isFirstScan && otps.length > 0) {
                     console.log('📂 Found OTPs in first scan');
                     otps.forEach(otp => {
-                        otp.status = 'old';
-                        otp.timestamp = Date.now();
+                        otp.status = 'old'; // Mark as old since they were already in inbox
+                        otp.timestamp = otp.timestamp || Date.now();
                         otp.email = emailPart;
                     });
                     
@@ -1283,19 +1326,17 @@
                 } else if (isFirstScan) {
                     showSweetAlert('info', 'Scan Complete', 'No OTPs found in email inbox');
                 } else {
-                    console.log('✅ Auto scan completed successfully (no new OTPs)');
+                    console.log('✅ Auto scan completed successfully (no new OTPs after monitoring start)');
                 }
                 
             } catch (error) {
                 console.error('❌ Scan failed:', error);
                 
-                // Rotate proxy and retry
                 if (state.retryCount < state.maxRetries) {
                     state.retryCount++;
                     rotateProxy();
                     console.log(`🔄 Retry attempt ${state.retryCount}/${state.maxRetries} with new proxy`);
                     
-                    // Don't show error for retries, just log
                     if (state.retryCount === state.maxRetries) {
                         showSweetAlert('warning', 'Proxy Issue', 'Having issues with proxies. Trying again next scan...');
                     }
@@ -1305,6 +1346,54 @@
                 
             } finally {
                 elements.loading.classList.remove('active');
+            }
+        }
+        
+        // Extract API data with new structure
+        function extractApiData(apiData) {
+            console.log('🔎 Extracting API data');
+            
+            const defaultResponse = {
+                email: '',
+                status: false,
+                total_messages: 0,
+                codes_found: [],
+                messages: []
+            };
+            
+            if (!apiData) {
+                console.log('❌ No API data');
+                return defaultResponse;
+            }
+            
+            const cleanData = apiData.trim();
+            
+            if (cleanData.includes('error') || cleanData.includes('Error') || cleanData.includes('failed')) {
+                console.log('⚠️ API returned error message');
+                return defaultResponse;
+            }
+            
+            try {
+                const parsedData = JSON.parse(cleanData);
+                console.log('✅ Parsed as JSON');
+                
+                // Process messages to add timestamp
+                if (parsedData.messages && Array.isArray(parsedData.messages)) {
+                    parsedData.messages = parsedData.messages.map(msg => ({
+                        ...msg,
+                        timestamp: parseApiDate(msg.date || ''),
+                        // Format date for display
+                        displayDate: msg.date || 'Unknown',
+                        // Clean subject for display
+                        displaySubject: msg.subject ? msg.subject.substring(0, 50) + (msg.subject.length > 50 ? '...' : '') : 'No Subject'
+                    }));
+                }
+                
+                return parsedData;
+                
+            } catch (e) {
+                console.log('❌ Error parsing JSON:', e.message);
+                return defaultResponse;
             }
         }
         
@@ -1329,7 +1418,6 @@
                     if (response.ok) {
                         return response;
                     } else if (attempt === 0) {
-                        // Rotate proxy and try again
                         rotateProxy();
                         const newProxyUrl = getProxyUrl(originalUrl);
                         proxyUrl = newProxyUrl;
@@ -1399,130 +1487,6 @@
                 `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         }
         
-        // Extract OTPs from API response
-        function extractOtps(apiData) {
-            console.log('🔎 Extracting OTPs from API data');
-            
-            let otps = [];
-            
-            if (!apiData) {
-                console.log('❌ No API data');
-                return otps;
-            }
-            
-            const cleanData = apiData.trim();
-            
-            if (cleanData.includes('error') || cleanData.includes('Error') || cleanData.includes('failed')) {
-                console.log('⚠️ API returned error message:', cleanData);
-                return otps;
-            }
-            
-            // Try to parse as JSON first
-            try {
-                const parsedData = JSON.parse(cleanData);
-                console.log('✅ Parsed as JSON');
-                
-                if (Array.isArray(parsedData)) {
-                    otps = parsedData.filter(item => item).map(otp => {
-                        const otpCode = otp.code || otp.otp || otp;
-                        if (otpCode && /^\d{4,8}$/.test(otpCode.toString())) {
-                            return {
-                                code: otpCode.toString(),
-                                sender: otp.sender || otp.from || 'Unknown',
-                                date: otp.date || new Date().toLocaleDateString('en-GB'),
-                                time: otp.time || new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                                timestamp: otp.timestamp || Date.now()
-                            };
-                        }
-                        return null;
-                    }).filter(otp => otp !== null);
-                } else if (parsedData.code || parsedData.otp) {
-                    const otpCode = parsedData.code || parsedData.otp;
-                    if (otpCode && /^\d{4,8}$/.test(otpCode.toString())) {
-                        otps = [{
-                            code: otpCode.toString(),
-                            sender: parsedData.sender || parsedData.from || 'Unknown',
-                            date: parsedData.date || new Date().toLocaleDateString('en-GB'),
-                            time: parsedData.time || new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                            timestamp: parsedData.timestamp || Date.now()
-                        }];
-                    }
-                } else if (typeof parsedData === 'string' && /^\d{4,8}$/.test(parsedData.trim())) {
-                    otps = [{
-                        code: parsedData.trim(),
-                        sender: 'Email Service',
-                        date: new Date().toLocaleDateString('en-GB'),
-                        time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                        timestamp: Date.now()
-                    }];
-                }
-                
-                if (otps.length > 0) {
-                    console.log(`✅ Found ${otps.length} OTP(s) in JSON`);
-                    return otps;
-                }
-                
-            } catch (e) {
-                console.log('ℹ️ Not valid JSON, trying text extraction');
-            }
-            
-            // Extract from text
-            const cleanText = cleanData.replace(/\\n/g, ' ').replace(/\\r/g, ' ').replace(/\\t/g, ' ');
-            
-            const otpPatterns = [
-                /\bOTP[:\s]*(\d{4,8})\b/i,
-                /\bCode[:\s]*(\d{4,8})\b/i,
-                /\bVerification[:\s]*(\d{4,8})\b/i,
-                /\b(\d{4,8})\s+is\s+your\s+(OTP|code|verification)/i,
-                /\bYour\s+(OTP|code|verification)[\s\S]*?(\d{4,8})\b/i,
-                /\b(\d{4,8})\b.*?(OTP|code|verification)/i,
-            ];
-            
-            const foundOtps = new Set();
-            
-            for (const pattern of otpPatterns) {
-                try {
-                    const matches = cleanText.match(new RegExp(pattern, 'gi'));
-                    if (matches) {
-                        for (const match of matches) {
-                            const codeMatch = match.match(/\d{4,8}/);
-                            if (codeMatch && !foundOtps.has(codeMatch[0])) {
-                                foundOtps.add(codeMatch[0]);
-                                otps.push({
-                                    code: codeMatch[0],
-                                    sender: 'Extracted from email',
-                                    date: new Date().toLocaleDateString('en-GB'),
-                                    time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                                    timestamp: Date.now()
-                                });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.log('Pattern error:', e);
-                }
-            }
-            
-            if (otps.length === 0) {
-                const numberMatches = cleanText.match(/\b\d{4,8}\b/g) || [];
-                for (const number of numberMatches) {
-                    if (!foundOtps.has(number) && /^\d{4,8}$/.test(number)) {
-                        foundOtps.add(number);
-                        otps.push({
-                            code: number,
-                            sender: 'Found in email',
-                            date: new Date().toLocaleDateString('en-GB'),
-                            time: new Date().toLocaleTimeString('en-GB', { hour12: false }),
-                            timestamp: Date.now()
-                        });
-                    }
-                }
-            }
-            
-            console.log(`✅ Extracted ${otps.length} OTP(s) from text`);
-            return otps;
-        }
-        
         // Send to Telegram with Inline Keyboard Buttons
         async function sendToTelegramWithButtons(otp) {
             if (!TELEGRAM_BOT_TOKEN || !state.telegramUserId) {
@@ -1533,18 +1497,18 @@
             try {
                 const emailPart = extractEmailFromString(state.currentEmail);
                 
-                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${emailPart}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.sender}\n⏰ *Time:* ${otp.time}\n📅 *Date:* ${otp.date}\n\n✅ OTP successfully received and verified.`;
+                const message = `🔔 *New OTP Received!*\n\n📧 *Email:* ${emailPart}\n🔑 *OTP Code:* \`${otp.code}\`\n📨 *From:* ${otp.from}\n📝 *Subject:* ${otp.subject}\n📅 *Date/Time:* ${otp.displayDate}\n\n✅ OTP successfully received and verified.`;
                 
                 const inlineKeyboard = {
                     inline_keyboard: [
                         [
                             {
-                                text: `${otp.code}`,
-                                callback_data: `copy_${otp.code}`
+                                text: "❓ Help",
+                                callback_data: "help"
                             },
                             {
-                                text: "❓ Help",
-                                callback_data: "https://t.me/fbmmarket"
+                                text: `${otp.code}`,
+                                callback_data: `copy_${otp.code}`
                             }
                         ]
                     ]
@@ -1552,7 +1516,6 @@
                 
                 const telegramUrl = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
                 
-                // Use direct fetch for Telegram API (no proxy needed usually)
                 const response = await fetch(telegramUrl, {
                     method: 'POST',
                     headers: {
@@ -1575,7 +1538,6 @@
                 } else {
                     console.error('Telegram API error:', responseData);
                     
-                    // Try fallback without inline keyboard
                     try {
                         const fallbackResponse = await fetch(telegramUrl, {
                             method: 'POST',
@@ -1661,8 +1623,16 @@
                         </div>
                     </div>
                     <div class="otp-meta">
-                        <span class="otp-from">From: ${otp.sender}</span>
-                        <span class="otp-time">${otp.date} ${otp.time}</span>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div class="otp-from" style="font-weight: 600;">From: ${otp.from || 'Unknown'}</div>
+                            <div class="otp-subject" style="font-size: 0.75rem; color: var(--text-light);">
+                                <strong>Subject:</strong> ${otp.displaySubject || otp.subject || 'No Subject'}
+                            </div>
+                        </div>
+                        <div class="otp-time" style="text-align: right;">
+                            <div style="font-weight: 500;">${otp.displayDate || otp.date || 'Unknown Date'}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-light);">Email Received Time</div>
+                        </div>
                     </div>
                 </div>
             `).join('');
